@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-page-background: #F5F5F5;
+    --color-card-light: #F1F2F2;
+    --color-dark-section: #0B0C0D;
+    --color-dark-card: #080A0B;
+    --color-text-primary: #040404;
+    --color-text-secondary: #505354;
+    --color-text-muted: #818084;
+    --color-text-inverse: #FFFFFF;
+    --color-text-inverse-muted: #9F9FA2;
+    --color-border: #E5E6E9;
+    --color-border-dark: #22252A;
+    --color-accent-pink: #E6C5D7;
+    --color-accent-blue: #D3D7FC;
+    --color-dot-blue: #444D67;
+    --color-button-primary: #0B0D0E;
+    --color-button-primary-hover: #222426;
+  }
+}
+
+@theme {
+  --font-sora: var(--font-sora), sans-serif;
+  --font-instrument: var(--font-instrument-serif), serif;
+
+  --color-page-bg: var(--color-page-background);
+  --color-card-light: var(--color-card-light);
+  --color-dark-sec: var(--color-dark-section);
+  --color-text-pri: var(--color-text-primary);
+  --color-text-sec: var(--color-text-secondary);
+  --color-text-mut: var(--color-text-muted);
+}
+
+html, body {
+  background-color: var(--color-page-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sora), sans-serif;
+  overflow-x: hidden;
+  scroll-behavior: auto !important; /* Managed by Lenis */
+}
+
+/* Custom Lenis smooth scroll styling */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F5F5F5;
+}
+::-webkit-scrollbar-thumb {
+  background: #C7C8CA;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #878787;
+}
+
+/* Cursor interaction helpers */
+@media (min-width: 1024px) {
+  .custom-cursor-active,
+  .custom-cursor-active a,
+  .custom-cursor-active button,
+  .custom-cursor-active [role="button"] {
+    cursor: none !important;
+  }
+}
+
+/* Glass & Glow effect utilities */
+.glow-pink-blue {
+  background: radial-gradient(circle at 30% 50%, rgba(230, 197, 215, 0.6) 0%, rgba(211, 215, 252, 0.6) 60%, rgba(245, 245, 245, 0) 100%);
+  filter: blur(30px);
+}
+
+.glow-contact {
+  background: radial-gradient(circle at 70% 50%, rgba(230, 197, 215, 0.7) 0%, rgba(211, 215, 252, 0.7) 50%, transparent 75%);
+  filter: blur(40px);
+}
+
+/* Typography helper classes matching spec */
+.font-editorial {
+  font-family: var(--font-instrument), serif;
+  font-style: italic;
+  font-weight: 400;
+}
