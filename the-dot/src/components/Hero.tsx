@@ -42,12 +42,13 @@ export function Hero() {
 
   return (
     <section
+      id="hero"
       ref={sectionRef}
-      className="relative pt-28 pb-12 md:pt-36 md:pb-20 px-4 md:px-8 max-w-[1440px] mx-auto overflow-hidden"
+      className="relative min-h-[100svh] pt-20 pb-8 md:pt-24 md:pb-12 px-4 md:px-8 max-w-[1440px] mx-auto flex flex-col justify-center overflow-hidden"
     >
       {/* Outer rounded card frame container matching reference composition */}
-      <div className="bg-[#F1F2F2] rounded-[32px] md:rounded-[40px] p-6 md:p-14 lg:p-16 border border-[#E5E6E9]/80 shadow-xs relative overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+      <div className="bg-[#F1F2F2] rounded-[32px] md:rounded-[40px] p-6 md:p-12 lg:p-14 border border-[#E5E6E9]/80 shadow-xs relative overflow-hidden flex-1 flex flex-col justify-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center my-auto">
           
           {/* Left Text Column (approx 50% width) */}
           <div className="lg:col-span-6 flex flex-col justify-center space-y-6 md:space-y-8 z-10">

@@ -4,7 +4,7 @@ import { Button } from "./Button";
 
 export function ContactCTA() {
   return (
-    <section className="py-12 md:py-20 px-4 md:px-8 max-w-[1440px] mx-auto">
+    <section id="contact" className="py-12 md:py-20 px-4 md:px-8 max-w-[1440px] mx-auto">
       <div className="relative w-full bg-[#F1F2F3] rounded-[32px] md:rounded-[40px] p-8 md:p-14 lg:p-16 border border-[#E5E6E9] shadow-xs overflow-hidden">
         
         {/* Soft Pink-Blue Ambient Glow Aura sampled directly from template reference */}

@@ -33,7 +33,7 @@ export function SelectedWork() {
   ];
 
   return (
-    <section className="py-12 md:py-20 px-4 md:px-8 max-w-[1440px] mx-auto">
+    <section id="work" className="py-12 md:py-20 px-4 md:px-8 max-w-[1440px] mx-auto">
       {/* Dark section frame matching approved reference image */}
       <div className="bg-[#080A0B] rounded-[32px] md:rounded-[40px] p-6 md:p-12 lg:p-16 border border-[#22252A] shadow-2xl relative overflow-hidden">
         

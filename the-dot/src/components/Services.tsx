@@ -32,7 +32,7 @@ export function Services() {
   ];
 
   return (
-    <section className="py-12 md:py-20 px-4 md:px-8 max-w-[1440px] mx-auto">
+    <section id="services" className="py-12 md:py-20 px-4 md:px-8 max-w-[1440px] mx-auto">
       {/* Section Header */}
       <div className="flex items-center justify-between mb-8 md:mb-12 px-2">
         <h2 className="font-sora text-[26px] md:text-[32px] font-bold text-[#040404] tracking-tight">

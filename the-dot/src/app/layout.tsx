@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
-import { Sora, Instrument_Serif } from "next/font/google";
+import {
+  Sora,
+  Instrument_Serif,
+} from "next/font/google";
+
 import "./globals.css";
+
 import { CustomCursor } from "@/components/CustomCursor";
-import { SmoothScroll } from "@/components/SmoothScroll";
 
 const sora = Sora({
   subsets: ["latin"],
@@ -20,8 +24,10 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "THE DOT — Strategy, Design & Digital Product Studio",
-  description: "We build brand identities, websites, and digital products for ambitious teams.",
+  title:
+    "THE DOT — Strategy, Design & Digital Product Studio",
+  description:
+    "We build brand identities, websites, and digital products for ambitious teams.",
 };
 
 export default function RootLayout({
@@ -32,13 +38,27 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${sora.variable} ${instrumentSerif.variable} h-full antialiased custom-cursor-active`}
+      className={`
+        ${sora.variable}
+        ${instrumentSerif.variable}
+        h-full
+        antialiased
+        custom-cursor-active
+      `}
     >
-      <body className="min-h-full flex flex-col bg-[#F5F5F5] text-[#040404] selection:bg-[#0B0D0E] selection:text-white">
-        <SmoothScroll>
-          <CustomCursor />
-          {children}
-        </SmoothScroll>
+      <body
+        className="
+          min-h-full
+          bg-[#F5F5F5]
+          text-[#040404]
+
+          selection:bg-[#0B0D0E]
+          selection:text-white
+        "
+      >
+        <CustomCursor />
+
+        {children}
       </body>
     </html>
   );
