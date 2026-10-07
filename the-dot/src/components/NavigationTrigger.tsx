@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  EdgeCurve,
+  EDGE_CURVE_WIDTH,
+} from "./EdgeCurve";
 
 interface NavigationTriggerProps {
   isOpen: boolean;
@@ -8,70 +17,34 @@ interface NavigationTriggerProps {
   activeSection?: string;
 }
 
-type Dot = {
-  cx: number;
-  cy: number;
-  r: number;
-  opacity: number;
-  delay: number;
-};
-
-/*
-|--------------------------------------------------------------------------
-| EXACTLY TWO DOTTED LEFT CHEVRONS
-|--------------------------------------------------------------------------
-|
-| Shape:
-|
-|      <   <
-|
-| No tail dots.
-| No particles after the second arrow.
-| No third chevron.
-|
-*/
-
-const CHEVRON_DOTS: Dot[] = [
-  // FIRST <
-  { cx: 8, cy: 24, r: 2.8, opacity: 1, delay: 0 },
-
-  { cx: 13, cy: 19, r: 2.5, opacity: 0.96, delay: 20 },
-  { cx: 18, cy: 14, r: 2.25, opacity: 0.9, delay: 40 },
-  { cx: 23, cy: 9, r: 2.0, opacity: 0.82, delay: 60 },
-  { cx: 28, cy: 4, r: 1.65, opacity: 0.7, delay: 80 },
-
-  { cx: 13, cy: 29, r: 2.5, opacity: 0.96, delay: 20 },
-  { cx: 18, cy: 34, r: 2.25, opacity: 0.9, delay: 40 },
-  { cx: 23, cy: 39, r: 2.0, opacity: 0.82, delay: 60 },
-  { cx: 28, cy: 44, r: 1.65, opacity: 0.7, delay: 80 },
-
-  // SECOND <
-  { cx: 32, cy: 24, r: 2.8, opacity: 1, delay: 45 },
-
-  { cx: 37, cy: 19, r: 2.5, opacity: 0.96, delay: 65 },
-  { cx: 42, cy: 14, r: 2.25, opacity: 0.9, delay: 85 },
-  { cx: 47, cy: 9, r: 2.0, opacity: 0.82, delay: 105 },
-  { cx: 52, cy: 4, r: 1.65, opacity: 0.7, delay: 125 },
-
-  { cx: 37, cy: 29, r: 2.5, opacity: 0.96, delay: 65 },
-  { cx: 42, cy: 34, r: 2.25, opacity: 0.9, delay: 85 },
-  { cx: 47, cy: 39, r: 2.0, opacity: 0.82, delay: 105 },
-  { cx: 52, cy: 44, r: 1.65, opacity: 0.7, delay: 125 },
-];
-
 export function NavigationTrigger({
   isOpen,
   onToggle,
   activeSection = "hero",
 }: NavigationTriggerProps) {
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const openTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [isHovered, setIsHovered] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const [isPressed, setIsPressed] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const scrollEndTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isHeroActive = activeSection === "hero";
+  const [isHovered, setIsHovered] =
+    useState(false);
+
+  const [edgeHovered, setEdgeHovered] =
+    useState(false);
+
+  const [isPressed, setIsPressed] =
+    useState(false);
+
+  const [hasScrolled, setHasScrolled] =
+    useState(false);
+
+  const [isScrolling, setIsScrolling] =
+    useState(false);
+
+  const [reducedMotion, setReducedMotion] =
+    useState(false);
 
   /*
   |--------------------------------------------------------------------------
@@ -101,256 +74,482 @@ export function NavigationTrigger({
 
   /*
   |--------------------------------------------------------------------------
-  | IMPORTANT FIX:
-  | RESET ARROW WHEN MENU / SECTION CHANGES
+  | ACTIVE SCENE SCROLL
   |--------------------------------------------------------------------------
   |
-  | Previously:
-  | - user hovered arrow
-  | - clicked it
-  | - button disappeared while still "hovered"
-  | - mouseleave never fired
-  | - returning Home reused isHovered=true
+  | IMPORTANT FIX:
   |
-  | Result:
-  | arrow stayed permanently visible.
+  | We attach the listener DIRECTLY to the currently active
+  | [data-scene-scroll] element.
   |
-  | Now every navigation state change resets it.
+  | This is much more reliable than listening on document.
   |
   */
 
   useEffect(() => {
-    setIsHovered(false);
-    setIsFocused(false);
-    setIsPressed(false);
-  }, [isOpen, activeSection]);
+    if (typeof document === "undefined") return;
+
+    const scroller =
+      document.querySelector<HTMLElement>(
+        '[data-scene-scroll][data-active="true"]'
+      );
+
+    if (!scroller) return;
+
+    const handleScroll = () => {
+      const scrollTop = scroller.scrollTop;
+
+      /*
+       * At top:
+       * curve is allowed to return automatically.
+       */
+      if (scrollTop <= 20) {
+        setHasScrolled(false);
+        setIsScrolling(false);
+
+        if (scrollEndTimerRef.current) {
+          clearTimeout(
+            scrollEndTimerRef.current
+          );
+
+          scrollEndTimerRef.current = null;
+        }
+
+        return;
+      }
+
+      /*
+       * ---------------------------------------------------------------
+       * CRITICAL FIX
+       * ---------------------------------------------------------------
+       *
+       * As soon as scrolling begins, kill all previous hover states.
+       *
+       * Otherwise:
+       *
+       * user clicked curve
+       * → mouse remains physically on right side
+       * → edgeHovered remains true
+       * → curve never disappears
+       */
+
+      setIsHovered(false);
+      setEdgeHovered(false);
+
+      setIsScrolling(true);
+      setHasScrolled(true);
+
+      /*
+       * Scroll-end detection.
+       */
+      if (scrollEndTimerRef.current) {
+        clearTimeout(
+          scrollEndTimerRef.current
+        );
+      }
+
+      scrollEndTimerRef.current =
+        setTimeout(() => {
+          setIsScrolling(false);
+
+          scrollEndTimerRef.current =
+            null;
+        }, 260);
+    };
+
+    /*
+     * Initialise correctly if returning to a scene
+     * that was previously scrolled.
+     */
+    setHasScrolled(
+      scroller.scrollTop > 20
+    );
+
+    scroller.addEventListener(
+      "scroll",
+      handleScroll,
+      {
+        passive: true,
+      }
+    );
+
+    return () => {
+      scroller.removeEventListener(
+        "scroll",
+        handleScroll
+      );
+
+      if (scrollEndTimerRef.current) {
+        clearTimeout(
+          scrollEndTimerRef.current
+        );
+
+        scrollEndTimerRef.current =
+          null;
+      }
+    };
+  }, [activeSection, isOpen]);
 
   /*
   |--------------------------------------------------------------------------
-  | HERO ONLY
+  | SECTION / MENU STATE RESET
   |--------------------------------------------------------------------------
   */
 
-  if (isOpen) {
-  return null;
-}
+  useEffect(() => {
+    setIsHovered(false);
+    setEdgeHovered(false);
+    setIsPressed(false);
+    setIsScrolling(false);
 
-  const arrowVisible = isHovered || isFocused;
+    const raf = requestAnimationFrame(() => {
+      const scroller =
+        document.querySelector<HTMLElement>(
+          '[data-scene-scroll][data-active="true"]'
+        );
+
+      setHasScrolled(
+        (scroller?.scrollTop ?? 0) > 20
+      );
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+    };
+  }, [activeSection, isOpen]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | CLEANUP
+  |--------------------------------------------------------------------------
+  */
+
+  useEffect(() => {
+    return () => {
+      if (openTimerRef.current) {
+        clearTimeout(
+          openTimerRef.current
+        );
+      }
+
+      if (scrollEndTimerRef.current) {
+        clearTimeout(
+          scrollEndTimerRef.current
+        );
+      }
+    };
+  }, []);
+
+  if (isOpen) {
+    return null;
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | VISIBILITY
+  |--------------------------------------------------------------------------
+  |
+  | At top:
+  | visible.
+  |
+  | Scrolled:
+  | hidden.
+  |
+  | While scrolling:
+  | always hidden.
+  |
+  | After scrolling:
+  | moving back to extreme right edge reveals it again.
+  |
+  */
+
+  const visible =
+    !isScrolling &&
+    (
+      !hasScrolled ||
+      edgeHovered ||
+      isHovered
+    );
+
+  /*
+  |--------------------------------------------------------------------------
+  | OPEN MENU
+  |--------------------------------------------------------------------------
+  */
+
+  const handleOpen = () => {
+    if (openTimerRef.current) {
+      return;
+    }
+
+    setIsPressed(true);
+
+    const delay =
+      reducedMotion ? 0 : 165;
+
+    openTimerRef.current =
+      setTimeout(() => {
+        setIsPressed(false);
+
+        openTimerRef.current =
+          null;
+
+        onToggle();
+      }, delay);
+  };
 
   return (
     <>
       {/* ================================================================
-          FULL-HEIGHT RIGHT EDGE GLOW
+          INVISIBLE RIGHT EDGE REVEAL ZONE
 
-          This is NOT a circle.
-          This is NOT a rectangular grey patch.
+          Always exists.
 
-          It runs from TOP → BOTTOM of viewport.
-
-          RIGHT EDGE:
-          darkest
-
-          moving LEFT into website:
-          progressively fades away
+          After scrolling:
+          move cursor to extreme right edge
+          → curve returns.
          ================================================================ */}
 
       <div
         aria-hidden="true"
         className="
           fixed
-          top-0
           right-0
-          z-[48]
+          top-0
+
+          z-[58]
 
           h-[100svh]
-          w-[105px]
-
-          pointer-events-none
+          w-[32px]
         "
-        style={{
-          background: `
-            linear-gradient(
-              to left,
+        onMouseEnter={() => {
+          /*
+           * Don't allow it to immediately reappear
+           * while the user is actively scrolling.
+           */
+          if (isScrolling) return;
 
-              rgba(0, 0, 0, 0.48) 0px,
-              rgba(0, 0, 0, 0.42) 4px,
-              rgba(0, 0, 0, 0.32) 12px,
-              rgba(0, 0, 0, 0.22) 26px,
-              rgba(0, 0, 0, 0.13) 44px,
-              rgba(0, 0, 0, 0.065) 66px,
-              rgba(0, 0, 0, 0.025) 84px,
-              rgba(0, 0, 0, 0) 105px
-            )
-          `,
+          setEdgeHovered(true);
+        }}
+        onMouseLeave={() => {
+          if (!isHovered) {
+            setEdgeHovered(false);
+          }
         }}
       />
 
       {/* ================================================================
-          DARK EDGE CORE
-
-          Adds the stronger edge exactly at the right-most boundary.
-
-          Narrow + full-height.
-          This creates the reference-like "edge light" behaviour,
-          but in BLACK.
+          FLUID CURVED BODY
          ================================================================ */}
 
       <div
         aria-hidden="true"
         className="
           fixed
-          top-0
           right-0
-          z-[49]
+          top-0
+
+          z-[59]
 
           h-[100svh]
-          w-[4px]
 
           pointer-events-none
+
+          will-change-transform
         "
         style={{
-          background: "rgba(0,0,0,0.92)",
+          width:
+            `${EDGE_CURVE_WIDTH}px`,
 
-          boxShadow: `
-            -4px 0 7px rgba(0,0,0,0.38),
-            -10px 0 15px rgba(0,0,0,0.24),
-            -22px 0 26px rgba(0,0,0,0.14),
-            -40px 0 42px rgba(0,0,0,0.07)
-          `,
+          transformOrigin:
+            "right center",
+
+          /*
+           * Slow liquid retreat.
+           *
+           * Instead of instantly shooting offscreen,
+           * it compresses horizontally and stretches
+           * slightly before leaving.
+           */
+          transform: visible
+            ? `
+              translate3d(0,0,0)
+              scaleX(1)
+              scaleY(1)
+            `
+            : `
+              translate3d(${EDGE_CURVE_WIDTH + 18}px,0,0)
+              scaleX(0.7)
+              scaleY(1.025)
+            `,
+
+          opacity:
+            visible ? 1 : 0,
+
+          filter:
+            visible
+              ? "blur(0px)"
+              : "blur(1.2px)",
+
+          transition: reducedMotion
+            ? `
+              transform 200ms ease,
+              opacity 180ms ease
+            `
+            : `
+              transform 950ms cubic-bezier(.22,1,.36,1),
+              opacity 760ms cubic-bezier(.22,1,.36,1),
+              filter 820ms cubic-bezier(.22,1,.36,1)
+            `,
+
+          /*
+           * Tiny resistance before disappearing.
+           *
+           * Returning has no delay.
+           */
+          transitionDelay:
+            visible
+              ? "0ms"
+              : "90ms",
         }}
-      />
+      >
+        <EdgeCurve
+          tone="dark"
+          pressed={isPressed}
+        />
+      </div>
 
       {/* ================================================================
-          INVISIBLE HERO INTERACTION AREA
-
-          Only centered vertically.
-
-          It does NOT control glow dimensions.
-          Glow is separate and full-height.
+          HAMBURGER
          ================================================================ */}
 
       <button
-        ref={triggerRef}
         type="button"
         aria-label="Open navigation"
         aria-expanded={isOpen}
         aria-controls="fullscreen-menu"
-        data-cursor="beacon"
-        onClick={onToggle}
-        onMouseEnter={() => setIsHovered(true)}
+        onClick={handleOpen}
+        onMouseEnter={() => {
+          if (isScrolling) return;
+
+          setIsHovered(true);
+          setEdgeHovered(true);
+        }}
         onMouseLeave={() => {
           setIsHovered(false);
-          setIsPressed(false);
+
+          if (hasScrolled) {
+            setEdgeHovered(false);
+          }
         }}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        onPointerDown={() => setIsPressed(true)}
-        onPointerUp={() => setIsPressed(false)}
         className="
           fixed
           right-0
           top-1/2
+
           z-[60]
 
+          flex
           -translate-y-1/2
 
-          w-[120px]
-          h-[170px]
+          items-center
+          justify-center
 
           border-0
-          outline-none
-          ring-0
-          appearance-none
           bg-transparent
 
-          cursor-none
-          select-none
+          cursor-pointer
 
-          focus:outline-none
+          outline-none
         "
+        style={{
+          width:
+            `${EDGE_CURVE_WIDTH}px`,
+
+          height: "150px",
+
+          opacity:
+            visible ? 1 : 0,
+
+          pointerEvents:
+            visible && !isScrolling
+              ? "auto"
+              : "none",
+
+          transition: reducedMotion
+            ? "opacity 180ms ease"
+            : `
+              opacity
+              650ms
+              cubic-bezier(.22,1,.36,1)
+            `,
+
+          transitionDelay:
+            visible
+              ? "100ms"
+              : "0ms",
+        }}
       >
-        {/* ==============================================================
-            EXACTLY TWO DOTTED < <
-
-            Hidden initially.
-            Appears ONLY on actual hover/focus.
-           ============================================================== */}
-
-        <div
+        <span
           aria-hidden="true"
           className="
             absolute
-            right-[22px]
-            top-1/2
 
-            pointer-events-none
-            will-change-transform
+            flex
+            w-[32px]
+
+            flex-col
+            items-center
+
+            gap-[5px]
           "
           style={{
-            opacity: arrowVisible ? 1 : 0,
+            right: "18px",
 
-            transform: `
-              translate3d(
-                ${arrowVisible ? -8 : 10}px,
-                -50%,
-                0
-              )
-              scale(${
-                isPressed
-                  ? 0.9
-                  : arrowVisible
-                  ? 1
-                  : 0.92
-              })
-            `,
+            transform:
+              isPressed
+                ? "scaleX(1.18) scaleY(0.84)"
+                : isHovered
+                ? "scaleX(1.06)"
+                : "scale(1)",
 
-            transition: reducedMotion
-              ? `
-                opacity 160ms ease,
-                transform 160ms ease
-              `
-              : `
-                opacity 220ms ease,
-                transform 440ms cubic-bezier(.16,1,.3,1)
-              `,
+            transition:
+              "transform 480ms cubic-bezier(.16,1,.3,1)",
           }}
         >
-          <svg
-            width="62"
-            height="52"
-            viewBox="0 0 62 48"
-            fill="none"
-            overflow="visible"
-          >
-            {CHEVRON_DOTS.map((dot, index) => (
-              <circle
-                key={`${dot.cx}-${dot.cy}-${index}`}
-                cx={dot.cx}
-                cy={dot.cy}
-                r={dot.r}
-                fill="#050505"
-                style={{
-                  opacity: arrowVisible
-                    ? dot.opacity
-                    : 0,
+          <span
+            className="
+              block
+              h-[1.5px]
+              w-[26px]
 
-                  transformOrigin: `${dot.cx}px ${dot.cy}px`,
+              rounded-full
+              bg-white
+            "
+          />
 
-                  transform: arrowVisible
-                    ? "translateX(0px) scale(1)"
-                    : "translateX(8px) scale(0.55)",
+          <span
+            className="
+              block
+              h-[1.5px]
+              w-[19px]
 
-                  transition: reducedMotion
-                    ? "opacity 160ms ease"
-                    : `
-                      opacity 260ms ease ${dot.delay}ms,
-                      transform 380ms cubic-bezier(.16,1,.3,1) ${dot.delay}ms
-                    `,
-                }}
-              />
-            ))}
-          </svg>
-        </div>
+              rounded-full
+              bg-white
+            "
+          />
+
+          <span
+            className="
+              block
+              h-[1.5px]
+              w-[26px]
+
+              rounded-full
+              bg-white
+            "
+          />
+        </span>
       </button>
     </>
   );

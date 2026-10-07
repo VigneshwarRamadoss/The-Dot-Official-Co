@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import {
   Sora,
   Instrument_Serif,
@@ -6,29 +7,39 @@ import {
 
 import "./globals.css";
 
-import { CustomCursor } from "@/components/CustomCursor";
-
 const sora = Sora({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: [
+    "400",
+    "500",
+    "600",
+    "700",
+  ],
   variable: "--font-sora",
   display: "swap",
 });
 
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["italic", "normal"],
-  variable: "--font-instrument-serif",
-  display: "swap",
-});
+const instrumentSerif =
+  Instrument_Serif({
+    subsets: ["latin"],
+    weight: "400",
+    style: [
+      "italic",
+      "normal",
+    ],
+    variable:
+      "--font-instrument-serif",
+    display: "swap",
+  });
 
-export const metadata: Metadata = {
-  title:
-    "THE DOT — Strategy, Design & Digital Product Studio",
-  description:
-    "We build brand identities, websites, and digital products for ambitious teams.",
-};
+export const metadata: Metadata =
+  {
+    title:
+      "THE DOT — Strategy, Design & Digital Product Studio",
+
+    description:
+      "We build brand identities, websites, and digital products for ambitious teams.",
+  };
 
 export default function RootLayout({
   children,
@@ -43,12 +54,12 @@ export default function RootLayout({
         ${instrumentSerif.variable}
         h-full
         antialiased
-        custom-cursor-active
       `}
     >
       <body
         className="
           min-h-full
+
           bg-[#F5F5F5]
           text-[#040404]
 
@@ -56,8 +67,6 @@ export default function RootLayout({
           selection:text-white
         "
       >
-        <CustomCursor />
-
         {children}
       </body>
     </html>

@@ -15,34 +15,29 @@ export function Approach() {
       num: "01",
       title: "Understand",
       desc: "Business + customer + problem",
-      x: 15,
-      y: 45,
     },
     {
       num: "02",
       title: "Define",
       desc: "Opportunity + strategy",
-      x: 38,
-      y: 65,
     },
     {
       num: "03",
       title: "Build",
       desc: "Brand + product + experience",
-      x: 62,
-      y: 35,
     },
     {
       num: "04",
       title: "Learn",
       desc: "Launch + observe + improve",
-      x: 85,
-      y: 55,
     },
   ];
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
     if (prefersReducedMotion || !pathRef.current) return;
 
     const ctx = gsap.context(() => {
@@ -58,8 +53,8 @@ export function Approach() {
         ease: "none",
         scrollTrigger: {
           trigger: sectionRef.current,
-          start: "top 70%",
-          end: "bottom 50%",
+          start: "top 72%",
+          end: "bottom 52%",
           scrub: 0.8,
         },
       });
@@ -72,37 +67,31 @@ export function Approach() {
     <section
       id="approach"
       ref={sectionRef}
-      className="py-12 md:py-20 px-4 md:px-8 max-w-[1440px] mx-auto"
+      className="mx-auto max-w-[1440px] px-4 py-12 md:px-8 md:py-20"
     >
-      <div className="bg-[#0E1212] rounded-[32px] md:rounded-[40px] p-8 md:p-16 border border-[#22252A] shadow-2xl relative overflow-hidden text-white">
-        
-        {/* Section Heading */}
+      <div className="relative overflow-hidden rounded-[32px] border border-[#22252A] bg-[#0E1212] p-8 text-white shadow-2xl md:rounded-[40px] md:p-16">
         <div className="mb-12">
-          <span className="font-sora text-[12px] font-medium tracking-widest text-[#9F9FA2] uppercase">
-            05 / Approach
+          <span className="font-sora text-[12px] font-medium uppercase tracking-widest text-[#9F9FA2]">
+            Approach
           </span>
-          <h2 className="font-sora text-[28px] md:text-[36px] font-bold tracking-tight text-white mt-1">
+          <h2 className="mt-1 font-sora text-[28px] font-bold tracking-tight text-white md:text-[36px]">
             How we partner
           </h2>
         </div>
 
-        {/* Interactive Sine Wave Line Container */}
         <div className="relative w-full py-12 md:py-20">
-          {/* Connecting SVG Sine-wave Line matching visual reference image */}
           <svg
-            className="absolute inset-0 w-full h-full pointer-events-none"
+            className="pointer-events-none absolute inset-0 h-full w-full"
             viewBox="0 0 1000 200"
             preserveAspectRatio="none"
             fill="none"
           >
-            {/* Background static faint guide path */}
             <path
               d="M 50 100 Q 250 20 400 130 T 750 70 T 950 110"
               stroke="#22252A"
               strokeWidth="2"
               fill="none"
             />
-            {/* Animated drawing path */}
             <path
               ref={pathRef}
               d="M 50 100 Q 250 20 400 130 T 750 70 T 950 110"
@@ -113,30 +102,26 @@ export function Approach() {
             />
           </svg>
 
-          {/* 4 Process Step Nodes */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-4 relative z-10">
-            {steps.map((step, idx) => (
+          <div className="relative z-10 grid grid-cols-1 gap-8 sm:grid-cols-2 md:gap-4 lg:grid-cols-4">
+            {steps.map((step) => (
               <div
-                key={idx}
-                className="flex flex-col space-y-2 lg:pt-16 p-4 rounded-2xl transition-all duration-300 hover:bg-white/5"
+                key={step.num}
+                className="flex flex-col space-y-2 rounded-2xl p-4 transition-all duration-300 hover:bg-white/5 lg:pt-16"
               >
-                {/* Node Dot Marker matching reference */}
-                <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-[#0E1212] shadow-sm mb-4" />
-
-                <span className="font-sora text-[20px] md:text-[24px] font-bold text-white">
+                <div className="mb-4 h-3.5 w-3.5 rounded-full border-2 border-[#0E1212] bg-white shadow-sm" />
+                <span className="font-sora text-[20px] font-bold text-white md:text-[24px]">
                   {step.num}
                 </span>
-                <h3 className="font-sora text-[18px] md:text-[20px] font-bold text-white">
+                <h3 className="font-sora text-[18px] font-bold text-white md:text-[20px]">
                   {step.title}
                 </h3>
-                <p className="font-sora text-[13px] md:text-[14px] text-[#9F9FA2] leading-relaxed">
+                <p className="font-sora text-[13px] leading-relaxed text-[#9F9FA2] md:text-[14px]">
                   {step.desc}
                 </p>
               </div>
             ))}
           </div>
         </div>
-
       </div>
     </section>
   );

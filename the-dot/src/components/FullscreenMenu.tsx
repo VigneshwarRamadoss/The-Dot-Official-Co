@@ -1,69 +1,47 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import Link from "next/link";
 import gsap from "gsap";
 
-export interface NavItemData {
+import {
+  EdgeCurve,
+  EDGE_CURVE_WIDTH,
+} from "./EdgeCurve";
+
+interface NavItemData {
   id: string;
   num: string;
   label: string;
-  previewImage?: string;
-  previewCategory?: string;
+  href?: string;
 }
 
-// HOME / HERO is intentionally NOT part of the menu list.
-// Clicking THE DOT in the menu header returns to Hero instead.
 const navItems: NavItemData[] = [
   {
-    id: "about",
-    num: "01",
-    label: "ABOUT",
-    previewImage: "/images/about-landscape.jpg",
-    previewCategory: "More than a studio",
-  },
-  {
     id: "services",
-    num: "02",
+    num: "01",
     label: "SERVICES",
-    previewImage: "/images/hero-facade.jpg",
-    previewCategory: "Brand, Web, Product, Growth",
   },
   {
     id: "work",
-    num: "03",
+    num: "02",
     label: "WORK",
-    previewImage: "/images/work-office.jpg",
-    previewCategory: "Featured Case Studies",
-  },
-  {
-    id: "approach",
-    num: "04",
-    label: "APPROACH",
-    previewImage: "/images/why-strategy.jpg",
-    previewCategory: "How we partner",
-  },
-  {
-    id: "why-us",
-    num: "05",
-    label: "WHY US",
-    previewImage: "/images/why-problem.jpg",
-    previewCategory: "Problem-first execution",
   },
   {
     id: "team",
-    num: "06",
+    num: "03",
     label: "TEAM",
-    previewImage: "/images/team-01.jpg",
-    previewCategory: "Designers & Problem Solvers",
   },
   {
     id: "contact",
-    num: "07",
+    num: "04",
     label: "CONTACT",
-    previewImage: "/images/why-launch.jpg",
-    previewCategory: "Book a discovery call",
+    href: "/book-a-call",
   },
 ];
 
@@ -80,305 +58,718 @@ export function FullscreenMenu({
   activeSection,
   onSelectSection,
 }: FullscreenMenuProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const linksRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
+  const overlayRef =
+    useRef<HTMLDivElement>(null);
 
-  const [shouldRender, setShouldRender] = useState(isOpen);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const linksRef =
+    useRef<HTMLDivElement>(null);
 
-  // Keep component mounted while the close animation finishes.
+  const closeTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
+
+  const [
+    shouldRender,
+    setShouldRender,
+  ] = useState(isOpen);
+
+  const [
+    hoveredIndex,
+    setHoveredIndex,
+  ] = useState<number | null>(null);
+
+  const [
+    closePressed,
+    setClosePressed,
+  ] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true);
     }
   }, [isOpen]);
 
-  // Open from the right edge / close back toward the right edge.
+  /*
+   * Menu open / close animation.
+   */
   useEffect(() => {
-    if (!shouldRender || !overlayRef.current) return;
+    if (
+      !shouldRender ||
+      !overlayRef.current
+    ) {
+      return;
+    }
 
-    const overlay = overlayRef.current;
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
+    const overlay =
+      overlayRef.current;
 
-    const linkElements = linksRef.current?.querySelectorAll(".menu-link-item");
+    const reduced =
+      window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
 
-    if (prefersReducedMotion) {
+    const links =
+      linksRef.current?.querySelectorAll(
+        ".menu-link-item"
+      );
+
+    if (reduced) {
       if (isOpen) {
         gsap.set(overlay, {
-          clipPath: "inset(0% 0% 0% 0%)",
+          clipPath:
+            "inset(0% 0% 0% 0%)",
           opacity: 1,
         });
-        gsap.set(linkElements || [], {
-          opacity: 1,
-          x: 0,
-        });
-        closeRef.current?.focus();
+
+        gsap.set(
+          links ?? [],
+          {
+            opacity: 1,
+            x: 0,
+          }
+        );
       } else {
         setShouldRender(false);
       }
+
       return;
     }
 
     const ctx = gsap.context(() => {
       if (isOpen) {
         gsap.set(overlay, {
-          clipPath: "inset(0% 0% 0% 100%)",
+          clipPath:
+            "inset(0% 0% 0% 100%)",
           opacity: 1,
         });
 
-        if (linkElements) {
-          gsap.set(linkElements, {
+        gsap.set(
+          links ?? [],
+          {
             opacity: 0,
-            x: 26,
-          });
-        }
+            x: -50,
+          }
+        );
 
-        const timeline = gsap.timeline();
+        const tl = gsap.timeline();
 
-        timeline.to(overlay, {
-          clipPath: "inset(0% 0% 0% 0%)",
-          duration: 0.78,
+        tl.to(overlay, {
+          clipPath:
+            "inset(0% 0% 0% 0%)",
+          duration: 0.7,
           ease: "power4.inOut",
         });
 
-        if (linkElements) {
-          timeline.to(
-            linkElements,
-            {
-              opacity: 1,
-              x: 0,
-              duration: 0.42,
-              stagger: 0.045,
-              ease: "power3.out",
-            },
-            "-=0.28"
-          );
-        }
-
-        timeline.call(() => {
-          closeRef.current?.focus();
-        });
+        tl.to(
+          links ?? [],
+          {
+            opacity: 1,
+            x: 0,
+            duration: 0.52,
+            stagger: 0.07,
+            ease: "power3.out",
+          },
+          "-=0.3"
+        );
       } else {
-        const timeline = gsap.timeline({
+        const tl = gsap.timeline({
           onComplete: () => {
             setShouldRender(false);
             setHoveredIndex(null);
           },
         });
 
-        if (linkElements) {
-          timeline.to(linkElements, {
+        tl.to(
+          links ?? [],
+          {
             opacity: 0,
-            x: 18,
+            x: 26,
             duration: 0.18,
+
             stagger: {
-              each: 0.018,
+              each: 0.025,
               from: "end",
             },
-            ease: "power2.in",
-          });
-        }
 
-        timeline.to(
+            ease: "power2.in",
+          }
+        );
+
+        tl.to(
           overlay,
           {
-            clipPath: "inset(0% 0% 0% 100%)",
-            duration: 0.52,
+            clipPath:
+              "inset(0% 0% 0% 100%)",
+            duration: 0.48,
             ease: "power3.inOut",
           },
-          "-=0.06"
+          "-=0.05"
         );
       }
     }, overlay);
 
-    return () => ctx.revert();
+    return () => {
+      ctx.revert();
+    };
   }, [isOpen, shouldRender]);
 
-  // ESC + focus trap.
+  /*
+   * ESC closes menu.
+   */
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown = (
+      event: KeyboardEvent
+    ) => {
       if (event.key === "Escape") {
         onClose();
-        return;
-      }
-
-      if (event.key !== "Tab" || !overlayRef.current) return;
-
-      const elements = overlayRef.current.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      );
-
-      if (elements.length === 0) return;
-
-      const first = elements[0];
-      const last = elements[elements.length - 1];
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
   }, [isOpen, onClose]);
 
-  if (!shouldRender) return null;
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(
+          closeTimerRef.current
+        );
+      }
+    };
+  }, []);
 
-  const handleNavClick = (id: string) => {
-    onSelectSection(id);
+  if (!shouldRender) {
+    return null;
+  }
+
+  const selectItem = (
+    item: NavItemData
+  ) => {
+    if (item.href) {
+      window.location.assign(
+        item.href
+      );
+
+      return;
+    }
+
+    onSelectSection(item.id);
     onClose();
   };
 
-  const activePreview =
-    hoveredIndex !== null ? navItems[hoveredIndex] : null;
+  /*
+   * Logo → Home
+   */
+  const returnHome = () => {
+    onSelectSection("hero");
+    onClose();
+  };
+
+  /*
+   * Small fluid motion before close.
+   */
+  const handleClose = () => {
+    if (closeTimerRef.current) {
+      return;
+    }
+
+    setClosePressed(true);
+
+    closeTimerRef.current =
+      setTimeout(() => {
+        setClosePressed(false);
+        closeTimerRef.current = null;
+
+        onClose();
+      }, 140);
+  };
 
   return (
     <div
       ref={overlayRef}
       id="fullscreen-menu"
+
       role="dialog"
       aria-modal="true"
       aria-label="Section navigation"
-      data-cursor-theme="dark"
-      className="fixed inset-0 z-[100] bg-[#0B0C0D] text-white flex flex-col justify-between p-6 md:p-12 lg:p-16 overflow-y-auto will-change-[clip-path]"
+
+      className="
+        fixed
+        inset-0
+
+        z-[100]
+
+        flex
+
+        overflow-hidden
+
+        bg-[#0B0C0D]
+        text-white
+      "
+
+      style={{
+        willChange: "clip-path",
+      }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-6">
-        {/* THE DOT now acts as the Home / Hero control. */}
-        <button
-          type="button"
-          onClick={() => handleNavClick("hero")}
-          data-cursor="hover"
-          aria-label="Return to Hero"
-          className="font-sora text-[15px] font-bold tracking-[0.2em] text-white hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        >
-          THE DOT
-        </button>
+      {/* Main area */}
+      <div
+        className="
+          flex
+          min-h-full
+          flex-1
+          flex-col
 
-        <button
-          ref={closeRef}
-          type="button"
-          onClick={onClose}
-          aria-label="Close menu"
-          className="font-sora text-[12px] font-semibold tracking-[0.18em] text-[#9F9FA2] hover:text-white transition-colors p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        >
-          CLOSE
-        </button>
-      </div>
+          px-8
+          py-9
 
-      {/* Main content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center my-auto py-6">
-        {/* Navigation links */}
+          md:px-12
+          md:py-10
+
+          lg:px-16
+          lg:py-12
+        "
+        style={{
+          paddingRight:
+            `${EDGE_CURVE_WIDTH + 56}px`,
+        }}
+      >
+        {/* ============================================================
+            LOGO — TOP LEFT
+           ============================================================ */}
+
         <div
-          ref={linksRef}
-          className="lg:col-span-7 flex flex-col space-y-1.5 md:space-y-2"
+          className="
+            flex
+            items-center
+          "
         >
-          {navItems.map((item, index) => {
-            const isActive = activeSection === item.id;
-            const isHovered = hoveredIndex === index;
-            const otherHovered = hoveredIndex !== null && hoveredIndex !== index;
+          <button
+            type="button"
+            onClick={returnHome}
+            aria-label="Return to home"
 
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
-                onFocus={() => setHoveredIndex(index)}
-                onBlur={() => setHoveredIndex(null)}
-                onClick={() => handleNavClick(item.id)}
-                data-cursor="hover"
-                data-cursor-text="GO"
-                className="menu-link-item group text-left flex items-center gap-4 p-1 rounded-xl cursor-pointer transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-              >
-                {/* Active indicator */}
-                <span
-                  className={`w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-300 ${
-                    isActive
-                      ? "bg-[#E6C5D7] scale-125"
-                      : "bg-white/20 group-hover:bg-white"
-                  }`}
-                />
+            className="
+              font-sora
 
-                {/* Number */}
-                <span className="font-sora text-[13px] font-medium text-[#9F9FA2] w-6 shrink-0">
-                  {item.num}
-                </span>
+              text-[15px]
+              font-bold
 
-                {/* Label */}
-                <span
-                  className={`font-sora text-[28px] sm:text-[38px] lg:text-[46px] font-bold tracking-tight transition-all duration-300 ${
-                    isHovered
-                      ? "translate-x-3 text-white"
-                      : otherHovered
-                      ? "opacity-35 text-[#9F9FA2]"
-                      : isActive
-                      ? "text-white"
-                      : "text-white/80"
-                  }`}
-                >
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
+              tracking-[0.2em]
+
+              text-white
+
+              cursor-pointer
+
+              transition-opacity
+
+              hover:opacity-60
+
+              focus:outline-none
+            "
+          >
+            THE DOT
+          </button>
         </div>
 
-        {/* Preview */}
-        <div className="hidden lg:block lg:col-span-5 relative w-full aspect-[4/3] rounded-[28px] overflow-hidden border border-white/10 bg-[#15171B] shadow-2xl">
-          {activePreview?.previewImage ? (
-            <div key={activePreview.id} className="relative w-full h-full">
-              <Image
-                src={activePreview.previewImage}
-                alt={activePreview.label}
-                fill
-                className="object-cover"
-                sizes="500px"
-              />
+        {/* ============================================================
+            MENU BLOCK — PUSHED TO RIGHT
+           ============================================================ */}
 
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+        <div
+          className="
+            flex
+            flex-1
 
-              <div className="absolute bottom-6 left-6 right-6">
-                <span className="font-sora text-[11px] font-semibold tracking-widest uppercase text-[#E6C5D7] block mb-1">
-                  {activePreview.num} / {activePreview.label}
-                </span>
+            items-center
+          "
+        >
+          <div
+            className="
+              grid
+              w-full
 
-                <p className="font-sora text-[18px] font-bold text-white">
-                  {activePreview.previewCategory}
-                </p>
-              </div>
+              grid-cols-12
+            "
+          >
+            {/*
+              Empty left area creates the same spatial feeling
+              as the reference.
+            */}
+            <div
+              className="
+                hidden
+                lg:block
+                lg:col-span-6
+              "
+            />
+
+            <div
+              ref={linksRef}
+
+              className="
+                col-span-12
+
+                flex
+                flex-col
+                items-start
+
+                gap-3
+
+                md:col-span-8
+                md:col-start-5
+
+                lg:col-span-5
+                lg:col-start-7
+
+                xl:col-span-4
+                xl:col-start-8
+              "
+            >
+              {navItems.map(
+                (item, index) => {
+                  const isActive =
+                    activeSection ===
+                    item.id;
+
+                  const isHovered =
+                    hoveredIndex ===
+                    index;
+
+                  const anotherHovered =
+                    hoveredIndex !==
+                      null &&
+                    hoveredIndex !==
+                      index;
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+
+                      onMouseEnter={() =>
+                        setHoveredIndex(
+                          index
+                        )
+                      }
+
+                      onMouseLeave={() =>
+                        setHoveredIndex(
+                          null
+                        )
+                      }
+
+                      onFocus={() =>
+                        setHoveredIndex(
+                          index
+                        )
+                      }
+
+                      onBlur={() =>
+                        setHoveredIndex(
+                          null
+                        )
+                      }
+
+                      onClick={() =>
+                        selectItem(item)
+                      }
+
+                      className="
+                        menu-link-item
+                        group
+
+                        flex
+                        w-fit
+
+                        items-baseline
+
+                        gap-5
+
+                        bg-transparent
+
+                        p-1
+
+                        text-left
+
+                        cursor-pointer
+
+                        outline-none
+                      "
+                    >
+                      {/* Number remains LEFT */}
+                      <span
+                        className={`
+                          w-[30px]
+                          shrink-0
+
+                          font-sora
+
+                          text-[11px]
+                          md:text-[12px]
+
+                          font-medium
+
+                          transition-colors
+                          duration-300
+
+                          ${
+                            isHovered ||
+                            isActive
+                              ? "text-white"
+                              : "text-[#67686D]"
+                          }
+                        `}
+                      >
+                        {item.num}
+                      </span>
+
+                      {/* Label */}
+                      <span
+                        className={`
+                          font-sora
+
+                          text-[40px]
+                          sm:text-[50px]
+                          lg:text-[58px]
+                          xl:text-[62px]
+
+                          font-bold
+
+                          leading-[1.08]
+
+                          tracking-[-0.045em]
+
+                          transition-all
+                          duration-300
+
+                          ${
+                            isHovered
+                              ? `
+                                translate-x-3
+                                text-white
+                              `
+                              : anotherHovered
+                              ? `
+                                text-white/23
+                              `
+                              : isActive
+                              ? `
+                                text-white
+                              `
+                              : `
+                                text-white/72
+                              `
+                          }
+                        `}
+                      >
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                }
+              )}
             </div>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-center p-8">
-              <span className="font-sora text-[12px] font-medium text-[#9F9FA2] uppercase tracking-widest">
-                Hover a section to preview
-              </span>
-            </div>
-          )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div
+          className="
+            flex
+            flex-col
+
+            items-start
+            justify-between
+
+            gap-4
+
+            pt-6
+
+            text-[12px]
+            text-[#9F9FA2]
+
+            sm:flex-row
+            sm:items-center
+          "
+        >
+          <p>
+            © {new Date().getFullYear()} THE DOT.
+            All rights reserved.
+          </p>
+
+          <Link
+            href="/book-a-call"
+
+            className="
+              font-sora
+              font-semibold
+
+              text-white
+
+              transition-opacity
+
+              hover:opacity-65
+            "
+          >
+            Book a discovery call →
+          </Link>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[13px] text-[#9F9FA2]">
-        <p>© {new Date().getFullYear()} THE DOT. All rights reserved.</p>
+      {/* ============================================================
+          WIDER WHITE CURVE
+         ============================================================ */}
 
-        <Link
-          href="/book-a-call"
-          onClick={onClose}
-          className="font-sora font-semibold text-white hover:text-[#E6C5D7] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        >
-          Book a discovery call →
-        </Link>
+      <div
+        className="
+          absolute
+          right-0
+          top-0
+
+          h-full
+
+          pointer-events-none
+        "
+
+        style={{
+          width:
+            `${EDGE_CURVE_WIDTH}px`,
+        }}
+      >
+        <EdgeCurve
+          tone="light"
+          pressed={closePressed}
+        />
       </div>
+
+      {/* ============================================================
+          CLOSE ICON INSIDE CURVE
+         ============================================================ */}
+
+      <button
+        type="button"
+
+        aria-label="Close navigation"
+
+        onClick={handleClose}
+
+        className="
+          group
+
+          absolute
+          right-0
+          top-1/2
+
+          z-[2]
+
+          flex
+          -translate-y-1/2
+
+          items-center
+          justify-center
+
+          border-0
+          bg-transparent
+
+          text-[#0B0C0D]
+
+          cursor-pointer
+          outline-none
+        "
+
+        style={{
+          width:
+            `${EDGE_CURVE_WIDTH}px`,
+
+          height:
+            "150px",
+        }}
+      >
+        <span
+          aria-hidden="true"
+
+          className="
+            relative
+
+            block
+
+            h-[24px]
+            w-[24px]
+          "
+
+          /*
+           * Shift slightly toward the outside half
+           * of the visible white curve.
+           */
+          style={{
+            transform:
+              "translateX(19px)",
+          }}
+        >
+          <span
+            className="
+              absolute
+              left-1/2
+              top-1/2
+
+              h-[2px]
+              w-[22px]
+
+              -translate-x-1/2
+              -translate-y-1/2
+
+              rotate-45
+
+              rounded-full
+
+              bg-current
+
+              transition-transform
+              duration-300
+
+              group-hover:rotate-[38deg]
+            "
+          />
+
+          <span
+            className="
+              absolute
+              left-1/2
+              top-1/2
+
+              h-[2px]
+              w-[22px]
+
+              -translate-x-1/2
+              -translate-y-1/2
+
+              -rotate-45
+
+              rounded-full
+
+              bg-current
+
+              transition-transform
+              duration-300
+
+              group-hover:-rotate-[38deg]
+            "
+          />
+        </span>
+      </button>
     </div>
   );
 }

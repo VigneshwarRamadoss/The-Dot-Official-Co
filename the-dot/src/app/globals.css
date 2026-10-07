@@ -33,46 +33,29 @@
   --color-text-mut: var(--color-text-muted);
 }
 
-html, body {
+html,
+body {
   background-color: var(--color-page-background);
   color: var(--color-text-primary);
   font-family: var(--font-sora), sans-serif;
   overflow-x: hidden;
-  scroll-behavior: auto !important; /* Managed by Lenis */
-}
-
-/* Custom Lenis smooth scroll styling */
-html.lenis, html.lenis body {
-  height: auto;
-}
-
-.lenis.lenis-smooth {
   scroll-behavior: auto !important;
-}
-
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
-
-.lenis.lenis-stopped {
-  overflow: hidden;
-}
-
-.lenis.lenis-smooth iframe {
-  pointer-events: none;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: #F5F5F5;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #C7C8CA;
   border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #878787;
 }
@@ -87,20 +70,85 @@ html.lenis, html.lenis body {
   }
 }
 
-/* Glass & Glow effect utilities */
+/* Existing effect utilities */
 .glow-pink-blue {
-  background: radial-gradient(circle at 30% 50%, rgba(230, 197, 215, 0.6) 0%, rgba(211, 215, 252, 0.6) 60%, rgba(245, 245, 245, 0) 100%);
+  background: radial-gradient(
+    circle at 30% 50%,
+    rgba(230, 197, 215, 0.6) 0%,
+    rgba(211, 215, 252, 0.6) 60%,
+    rgba(245, 245, 245, 0) 100%
+  );
   filter: blur(30px);
 }
 
 .glow-contact {
-  background: radial-gradient(circle at 70% 50%, rgba(230, 197, 215, 0.7) 0%, rgba(211, 215, 252, 0.7) 50%, transparent 75%);
+  background: radial-gradient(
+    circle at 70% 50%,
+    rgba(230, 197, 215, 0.7) 0%,
+    rgba(211, 215, 252, 0.7) 50%,
+    transparent 75%
+  );
   filter: blur(40px);
 }
 
-/* Typography helper classes matching spec */
 .font-editorial {
   font-family: var(--font-instrument), serif;
   font-style: italic;
   font-weight: 400;
+}
+
+/* Trusted clients marquee */
+.client-marquee {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+}
+
+.client-marquee-track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  will-change: transform;
+  animation: client-marquee 28s linear infinite;
+}
+
+.client-marquee:hover .client-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes client-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .client-marquee-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: 100%;
+    row-gap: 1rem;
+  }
+
+  html {
+    scroll-behavior: auto !important;
+  }
 }

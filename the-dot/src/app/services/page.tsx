@@ -1,6 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Services } from "@/components/Services";
-import { ContactCTA } from "@/components/ContactCTA";
+import { ContactCTA } from "@/components/ContactDialog";
 import { Footer } from "@/components/Footer";
 
 export default function ServicesPage() {
