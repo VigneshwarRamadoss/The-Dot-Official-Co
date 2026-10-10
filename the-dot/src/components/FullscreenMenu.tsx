@@ -14,6 +14,12 @@ import {
   EDGE_CURVE_WIDTH,
 } from "./EdgeCurve";
 
+/* =========================================================
+   CONFIG
+   ========================================================= */
+
+const CURVE_DURATION = 1.4;
+
 interface NavItemData {
   id: string;
   num: string;
@@ -23,25 +29,25 @@ interface NavItemData {
 
 const navItems: NavItemData[] = [
   {
-    id: "services",
-    num: "01",
-    label: "SERVICES",
-  },
-  {
     id: "work",
-    num: "02",
+    num: "01",
     label: "WORK",
   },
   {
-    id: "team",
-    num: "03",
-    label: "TEAM",
+    id: "services",
+    num: "02",
+    label: "SERVICES",
   },
   {
     id: "contact",
-    num: "04",
+    num: "03",
     label: "CONTACT",
     href: "/book-a-call",
+  },
+  {
+    id: "team",
+    num: "04",
+    label: "TEAM",
   },
 ];
 
@@ -49,7 +55,10 @@ interface FullscreenMenuProps {
   isOpen: boolean;
   onClose: () => void;
   activeSection: string;
-  onSelectSection: (id: string) => void;
+
+  onSelectSection: (
+    id: string
+  ) => void;
 }
 
 export function FullscreenMenu({
@@ -58,16 +67,23 @@ export function FullscreenMenu({
   activeSection,
   onSelectSection,
 }: FullscreenMenuProps) {
-  const overlayRef =
+  const rootRef =
+    useRef<HTMLDivElement>(null);
+
+  const surfaceRef =
+    useRef<HTMLDivElement>(null);
+
+  const contentRef =
     useRef<HTMLDivElement>(null);
 
   const linksRef =
     useRef<HTMLDivElement>(null);
 
-  const closeTimerRef =
-    useRef<ReturnType<typeof setTimeout> | null>(
-      null
-    );
+  const closeControlRef =
+    useRef<HTMLDivElement>(null);
+
+  const returnHomeAfterCloseRef =
+    useRef(false);
 
   const [
     shouldRender,
@@ -77,12 +93,14 @@ export function FullscreenMenu({
   const [
     hoveredIndex,
     setHoveredIndex,
-  ] = useState<number | null>(null);
+  ] =
+    useState<number | null>(
+      null
+    );
 
-  const [
-    closePressed,
-    setClosePressed,
-  ] = useState(false);
+  /* =======================================================
+     MOUNT
+     ======================================================= */
 
   useEffect(() => {
     if (isOpen) {
@@ -90,140 +108,343 @@ export function FullscreenMenu({
     }
   }, [isOpen]);
 
-  /*
-   * Menu open / close animation.
-   */
+  /* =======================================================
+     OPEN / CLOSE
+     ======================================================= */
+
   useEffect(() => {
+    const root =
+      rootRef.current;
+
+    const surface =
+      surfaceRef.current;
+
+    const content =
+      contentRef.current;
+
+    const closeControl =
+      closeControlRef.current;
+
     if (
       !shouldRender ||
-      !overlayRef.current
+      !root ||
+      !surface ||
+      !content ||
+      !closeControl
     ) {
       return;
     }
 
-    const overlay =
-      overlayRef.current;
+    const links =
+      linksRef.current?.querySelectorAll(
+        ".menu-link-item"
+      ) ?? [];
 
     const reduced =
       window.matchMedia(
         "(prefers-reduced-motion: reduce)"
       ).matches;
 
-    const links =
-      linksRef.current?.querySelectorAll(
-        ".menu-link-item"
-      );
+    const fullWidth =
+      window.innerWidth +
+      EDGE_CURVE_WIDTH * 2;
+
+    /* =====================================================
+       REDUCED MOTION
+       ===================================================== */
 
     if (reduced) {
       if (isOpen) {
-        gsap.set(overlay, {
-          clipPath:
-            "inset(0% 0% 0% 0%)",
+        gsap.set(root, {
+          display: "block",
+          pointerEvents: "auto",
+        });
+
+        gsap.set(surface, {
+          width: fullWidth,
+        });
+
+        gsap.set(content, {
           opacity: 1,
         });
 
+        gsap.set(links, {
+          opacity: 1,
+          x: 0,
+          y: 0,
+        });
+
         gsap.set(
-          links ?? [],
+          closeControl,
           {
             opacity: 1,
-            x: 0,
           }
         );
       } else {
         setShouldRender(false);
+
+        if (
+          returnHomeAfterCloseRef.current
+        ) {
+          returnHomeAfterCloseRef.current =
+            false;
+
+          onSelectSection(
+            "hero"
+          );
+        }
       }
 
       return;
     }
 
-    const ctx = gsap.context(() => {
-      if (isOpen) {
-        gsap.set(overlay, {
-          clipPath:
-            "inset(0% 0% 0% 100%)",
-          opacity: 1,
-        });
+    const ctx =
+      gsap.context(
+        () => {
+          /* ===============================================
+             OPEN
+             =============================================== */
 
-        gsap.set(
-          links ?? [],
-          {
-            opacity: 0,
-            x: -50,
+          if (isOpen) {
+            returnHomeAfterCloseRef.current =
+              false;
+
+            gsap.set(root, {
+              display: "block",
+
+              pointerEvents:
+                "auto",
+            });
+
+            gsap.set(surface, {
+              width: 0,
+            });
+
+            gsap.set(content, {
+              opacity: 0,
+            });
+
+            gsap.set(links, {
+              opacity: 0,
+
+              x: -18,
+              y: 18,
+            });
+
+            gsap.set(
+              closeControl,
+              {
+                opacity: 0,
+                x: 8,
+              }
+            );
+
+            const timeline =
+              gsap.timeline();
+
+            /*
+             * CURVE
+             * RIGHT → LEFT
+             */
+
+            timeline.to(
+              surface,
+              {
+                width:
+                  fullWidth,
+
+                duration:
+                  CURVE_DURATION,
+
+                ease:
+                  "power3.inOut",
+              }
+            );
+
+            timeline.to(
+              content,
+              {
+                opacity: 1,
+
+                duration: 0.38,
+
+                ease:
+                  "power2.out",
+              },
+              `-=${CURVE_DURATION * 0.3}`
+            );
+
+            timeline.to(
+              links,
+              {
+                opacity: 1,
+
+                x: 0,
+                y: 0,
+
+                duration: 0.58,
+
+                stagger: 0.075,
+
+                ease:
+                  "power3.out",
+              },
+              "-=0.22"
+            );
+
+            timeline.to(
+              closeControl,
+              {
+                opacity: 1,
+
+                x: 0,
+
+                duration: 0.42,
+
+                ease:
+                  "power3.out",
+              },
+              "-=0.36"
+            );
+
+            return;
           }
-        );
 
-        const tl = gsap.timeline();
+          /* ===============================================
+             CLOSE
+             =============================================== */
 
-        tl.to(overlay, {
-          clipPath:
-            "inset(0% 0% 0% 0%)",
-          duration: 0.7,
-          ease: "power4.inOut",
-        });
+          gsap.set(root, {
+            pointerEvents:
+              "none",
+          });
 
-        tl.to(
-          links ?? [],
-          {
-            opacity: 1,
-            x: 0,
-            duration: 0.52,
-            stagger: 0.07,
-            ease: "power3.out",
-          },
-          "-=0.3"
-        );
-      } else {
-        const tl = gsap.timeline({
-          onComplete: () => {
-            setShouldRender(false);
-            setHoveredIndex(null);
-          },
-        });
+          gsap.set(surface, {
+            width: fullWidth,
+          });
 
-        tl.to(
-          links ?? [],
-          {
-            opacity: 0,
-            x: 26,
-            duration: 0.18,
+          const timeline =
+            gsap.timeline({
+              onComplete:
+                () => {
+                  setHoveredIndex(
+                    null
+                  );
 
-            stagger: {
-              each: 0.025,
-              from: "end",
+                  setShouldRender(
+                    false
+                  );
+
+                  if (
+                    returnHomeAfterCloseRef.current
+                  ) {
+                    returnHomeAfterCloseRef.current =
+                      false;
+
+                    onSelectSection(
+                      "hero"
+                    );
+                  }
+                },
+            });
+
+          timeline.to(
+            closeControl,
+            {
+              opacity: 0,
+
+              duration: 0.18,
+
+              ease:
+                "power2.out",
             },
+            0
+          );
 
-            ease: "power2.in",
-          }
-        );
+          timeline.to(
+            links,
+            {
+              opacity: 0,
 
-        tl.to(
-          overlay,
-          {
-            clipPath:
-              "inset(0% 0% 0% 100%)",
-            duration: 0.48,
-            ease: "power3.inOut",
-          },
-          "-=0.05"
-        );
-      }
-    }, overlay);
+              x: 14,
+
+              duration: 0.38,
+
+              stagger: {
+                each: 0.025,
+
+                from: "end",
+              },
+
+              ease:
+                "power2.in",
+            },
+            0
+          );
+
+          timeline.to(
+            content,
+            {
+              opacity: 0,
+
+              duration: 0.34,
+
+              ease:
+                "power2.in",
+            },
+            0.08
+          );
+
+          /*
+           * SAME CURVE
+           * LEFT → RIGHT
+           */
+
+          timeline.to(
+            surface,
+            {
+              width: 0,
+
+              duration:
+                CURVE_DURATION,
+
+              ease:
+                "power3.inOut",
+            },
+            0
+          );
+        },
+        root
+      );
 
     return () => {
       ctx.revert();
     };
-  }, [isOpen, shouldRender]);
+  }, [
+    isOpen,
+    shouldRender,
+    onSelectSection,
+  ]);
 
-  /*
-   * ESC closes menu.
-   */
+  /* =======================================================
+     ESC
+     ======================================================= */
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
 
     const handleKeyDown = (
       event: KeyboardEvent
     ) => {
-      if (event.key === "Escape") {
+      if (
+        event.key ===
+        "Escape"
+      ) {
+        returnHomeAfterCloseRef.current =
+          true;
+
         onClose();
       }
     };
@@ -239,25 +460,25 @@ export function FullscreenMenu({
         handleKeyDown
       );
     };
-  }, [isOpen, onClose]);
-
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) {
-        clearTimeout(
-          closeTimerRef.current
-        );
-      }
-    };
-  }, []);
+  }, [
+    isOpen,
+    onClose,
+  ]);
 
   if (!shouldRender) {
     return null;
   }
 
+  /* =======================================================
+     MENU SELECTION
+     ======================================================= */
+
   const selectItem = (
     item: NavItemData
   ) => {
+    returnHomeAfterCloseRef.current =
+      false;
+
     if (item.href) {
       window.location.assign(
         item.href
@@ -266,44 +487,49 @@ export function FullscreenMenu({
       return;
     }
 
-    onSelectSection(item.id);
+    onSelectSection(
+      item.id
+    );
+
     onClose();
   };
 
-  /*
-   * Logo → Home
-   */
+  /* =======================================================
+     THE DOT → HOME
+     ======================================================= */
+
   const returnHome = () => {
-    onSelectSection("hero");
+    returnHomeAfterCloseRef.current =
+      false;
+
+    onSelectSection(
+      "hero"
+    );
+
     onClose();
   };
 
-  /*
-   * Small fluid motion before close.
-   */
+  /* =======================================================
+     X
+     ======================================================= */
+
   const handleClose = () => {
-    if (closeTimerRef.current) {
-      return;
-    }
+    returnHomeAfterCloseRef.current =
+      true;
 
-    setClosePressed(true);
-
-    closeTimerRef.current =
-      setTimeout(() => {
-        setClosePressed(false);
-        closeTimerRef.current = null;
-
-        onClose();
-      }, 140);
+    onClose();
   };
 
   return (
     <div
-      ref={overlayRef}
+      ref={rootRef}
+
       id="fullscreen-menu"
 
       role="dialog"
+
       aria-modal="true"
+
       aria-label="Section navigation"
 
       className="
@@ -312,336 +538,494 @@ export function FullscreenMenu({
 
         z-[100]
 
-        flex
-
         overflow-hidden
-
-        bg-[#0B0C0D]
-        text-white
       "
-
-      style={{
-        willChange: "clip-path",
-      }}
     >
-      {/* Main area */}
+      {/* =================================================
+          DARK SURFACE
+         ================================================= */}
+
       <div
+        ref={surfaceRef}
+
         className="
-          flex
-          min-h-full
-          flex-1
-          flex-col
+          fixed
 
-          px-8
-          py-9
+          right-0
+          top-0
 
-          md:px-12
-          md:py-10
+          h-[100svh]
 
-          lg:px-16
-          lg:py-12
+          overflow-visible
+
+          will-change-[width]
         "
+
         style={{
-          paddingRight:
-            `${EDGE_CURVE_WIDTH + 56}px`,
+          width: 0,
         }}
       >
-        {/* ============================================================
-            LOGO — TOP LEFT
-           ============================================================ */}
+        {/* =================================================
+            BODY
+           ================================================= */}
 
         <div
           className="
-            flex
-            items-center
+            absolute
+
+            inset-y-0
+            right-0
+
+            h-full
+            w-full
+
+            overflow-hidden
+
+            bg-brand
           "
         >
-          <button
-            type="button"
-            onClick={returnHome}
-            aria-label="Return to home"
+          {/* ===============================================
+              CONTENT
+             =============================================== */}
+
+          <div
+            ref={contentRef}
 
             className="
-              font-sora
+              absolute
 
-              text-[15px]
-              font-bold
+              right-0
+              top-0
 
-              tracking-[0.2em]
+              flex
+
+              h-[100svh]
+              w-[100vw]
+
+              flex-col
+
+              px-7
+              py-8
 
               text-white
 
-              cursor-pointer
+              sm:px-10
+              sm:py-9
 
-              transition-opacity
+              md:px-12
+              md:py-10
 
-              hover:opacity-60
-
-              focus:outline-none
+              lg:px-16
+              lg:py-12
             "
+
+            style={{
+              paddingRight:
+                `${EDGE_CURVE_WIDTH + 54}px`,
+            }}
           >
-            THE DOT
-          </button>
-        </div>
+            {/* ===========================================
+                THE DOT
+               =========================================== */}
 
-        {/* ============================================================
-            MENU BLOCK — PUSHED TO RIGHT
-           ============================================================ */}
+            <button
+              type="button"
 
-        <div
-          className="
-            flex
-            flex-1
+              onClick={
+                returnHome
+              }
 
-            items-center
-          "
-        >
-          <div
-            className="
-              grid
-              w-full
-
-              grid-cols-12
-            "
-          >
-            {/*
-              Empty left area creates the same spatial feeling
-              as the reference.
-            */}
-            <div
-              className="
-                hidden
-                lg:block
-                lg:col-span-6
-              "
-            />
-
-            <div
-              ref={linksRef}
+              aria-label="THE DOT — Home"
 
               className="
-                col-span-12
+                w-fit
 
-                flex
-                flex-col
-                items-start
+                cursor-pointer
 
-                gap-3
+                font-sora
 
-                md:col-span-8
-                md:col-start-5
+                text-[13px]
+                font-bold
 
-                lg:col-span-5
-                lg:col-start-7
+                uppercase
 
-                xl:col-span-4
-                xl:col-start-8
+                tracking-[0.24em]
+
+                text-white
+
+                transition-opacity
+                duration-300
+
+                hover:opacity-55
+
+                focus:outline-none
+
+                md:text-[14px]
               "
             >
-              {navItems.map(
-                (item, index) => {
-                  const isActive =
-                    activeSection ===
-                    item.id;
+              THE DOT
+            </button>
 
-                  const isHovered =
-                    hoveredIndex ===
-                    index;
+            {/* ===========================================
+                MENU
+               =========================================== */}
 
-                  const anotherHovered =
-                    hoveredIndex !==
-                      null &&
-                    hoveredIndex !==
-                      index;
+            <div
+              className="
+                flex
+                flex-1
 
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
+                items-center
+              "
+            >
+              <div
+                className="
+                  grid
 
-                      onMouseEnter={() =>
-                        setHoveredIndex(
-                          index
-                        )
-                      }
+                  w-full
 
-                      onMouseLeave={() =>
-                        setHoveredIndex(
-                          null
-                        )
-                      }
+                  grid-cols-12
+                "
+              >
+                {/* 
+                  ORIGINAL SPATIAL ALIGNMENT.
 
-                      onFocus={() =>
-                        setHoveredIndex(
-                          index
-                        )
-                      }
+                  Menu pushed back toward
+                  the right side like before.
+                */}
 
-                      onBlur={() =>
-                        setHoveredIndex(
-                          null
-                        )
-                      }
+                <div
+                  className="
+                    hidden
 
-                      onClick={() =>
-                        selectItem(item)
-                      }
+                    lg:col-span-6
+                    lg:block
+                  "
+                />
 
-                      className="
-                        menu-link-item
-                        group
+                <div
+                  ref={linksRef}
 
-                        flex
-                        w-fit
+                  className="
+                    col-span-12
 
-                        items-baseline
+                    flex
+                    flex-col
 
-                        gap-5
+                    items-start
 
-                        bg-transparent
+                    md:col-span-8
+                    md:col-start-5
 
-                        p-1
+                    lg:col-span-5
+                    lg:col-start-7
 
-                        text-left
+                    xl:col-span-4
+                    xl:col-start-8
+                  "
+                >
+                  {navItems.map(
+                    (
+                      item,
+                      index
+                    ) => {
+                      const active =
+                        activeSection ===
+                        item.id;
 
-                        cursor-pointer
+                      const hovered =
+                        hoveredIndex ===
+                        index;
 
-                        outline-none
-                      "
-                    >
-                      {/* Number remains LEFT */}
-                      <span
-                        className={`
-                          w-[30px]
-                          shrink-0
+                      const anotherHovered =
+                        hoveredIndex !==
+                          null &&
+                        hoveredIndex !==
+                          index;
 
-                          font-sora
-
-                          text-[11px]
-                          md:text-[12px]
-
-                          font-medium
-
-                          transition-colors
-                          duration-300
-
-                          ${
-                            isHovered ||
-                            isActive
-                              ? "text-white"
-                              : "text-[#67686D]"
+                      return (
+                        <button
+                          key={
+                            item.id
                           }
-                        `}
-                      >
-                        {item.num}
-                      </span>
 
-                      {/* Label */}
-                      <span
-                        className={`
-                          font-sora
+                          type="button"
 
-                          text-[40px]
-                          sm:text-[50px]
-                          lg:text-[58px]
-                          xl:text-[62px]
-
-                          font-bold
-
-                          leading-[1.08]
-
-                          tracking-[-0.045em]
-
-                          transition-all
-                          duration-300
-
-                          ${
-                            isHovered
-                              ? `
-                                translate-x-3
-                                text-white
-                              `
-                              : anotherHovered
-                              ? `
-                                text-white/23
-                              `
-                              : isActive
-                              ? `
-                                text-white
-                              `
-                              : `
-                                text-white/72
-                              `
+                          onMouseEnter={() =>
+                            setHoveredIndex(
+                              index
+                            )
                           }
-                        `}
-                      >
-                        {item.label}
-                      </span>
-                    </button>
-                  );
-                }
-              )}
+
+                          onMouseLeave={() =>
+                            setHoveredIndex(
+                              null
+                            )
+                          }
+
+                          onFocus={() =>
+                            setHoveredIndex(
+                              index
+                            )
+                          }
+
+                          onBlur={() =>
+                            setHoveredIndex(
+                              null
+                            )
+                          }
+
+                          onClick={() =>
+                            selectItem(
+                              item
+                            )
+                          }
+
+                          /*
+                           * =====================================
+                           * LARGE CLICK / HOVER RECTANGLE
+                           * =====================================
+                           *
+                           * Visual alignment remains untouched.
+                           *
+                           * But interaction extends:
+                           *
+                           * 96px LEFT
+                           * 56px RIGHT
+                           * more vertical room
+                           */
+
+                          className="
+                            menu-link-item
+
+                            group
+
+                            -ml-24
+
+                            flex
+
+                            w-[calc(100%+9.5rem)]
+
+                            items-center
+
+                            gap-5
+
+                            bg-transparent
+
+                            py-[13px]
+
+                            pl-24
+                            pr-14
+
+                            text-left
+
+                            cursor-pointer
+
+                            outline-none
+                          "
+                        >
+                          {/* ===============================
+                              NUMBER
+                             =============================== */}
+
+                          <span
+                            className={`
+                              w-[30px]
+
+                              shrink-0
+
+                              font-sora
+
+                              text-[10px]
+                              font-medium
+
+                              tracking-[0.1em]
+
+                              transition-colors
+                              duration-300
+
+                              md:text-[11px]
+
+                              ${
+                                hovered ||
+                                active
+                                  ? "text-white/75"
+                                  : "text-white/25"
+                              }
+                            `}
+                          >
+                            {
+                              item.num
+                            }
+                          </span>
+
+                          {/* ===============================
+                              LABEL
+
+                              BACK TO SORA
+                              + SMALLER SIZE
+                             =============================== */}
+
+                          <span
+                            className={`
+                              font-sora
+
+                              text-[34px]
+
+                              font-bold
+
+                              leading-[1]
+
+                              tracking-[-0.045em]
+
+                              transition-all
+
+                              duration-300
+
+                              sm:text-[40px]
+
+                              lg:text-[46px]
+
+                              xl:text-[50px]
+
+                              ${
+                                hovered
+                                  ? "translate-x-2.5 text-white"
+                                  : anotherHovered
+                                  ? "text-white/20"
+                                  : active
+                                  ? "text-white"
+                                  : "text-white/72"
+                              }
+                            `}
+                          >
+                            {
+                              item.label
+                            }
+                          </span>
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ===========================================
+                FOOTER
+               =========================================== */}
+
+            <div
+              className="
+                flex
+
+                flex-col
+
+                items-start
+                justify-between
+
+                gap-4
+
+                border-t
+                border-white/10
+
+                pt-5
+
+                font-sora
+
+                text-[10px]
+
+                uppercase
+
+                tracking-[0.1em]
+
+                text-white/40
+
+                sm:flex-row
+                sm:items-center
+
+                md:text-[11px]
+              "
+            >
+              <p>
+                ©{" "}
+                {new Date().getFullYear()}{" "}
+                THE DOT
+              </p>
+
+              <Link
+                href="/book-a-call"
+
+                className="
+                  font-semibold
+
+                  normal-case
+
+                  tracking-normal
+
+                  text-white
+
+                  transition-colors
+                  duration-300
+
+                  hover:text-[#C9A09D]
+                "
+              >
+                Book a discovery call ↗
+              </Link>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
+        {/* =================================================
+            SAME DARK CURVE
+
+            OPEN:
+            RIGHT → LEFT
+
+            CLOSE:
+            LEFT → RIGHT
+           ================================================= */}
+
         <div
           className="
-            flex
-            flex-col
+            absolute
 
-            items-start
-            justify-between
+            left-0
+            top-0
 
-            gap-4
+            h-full
 
-            pt-6
-
-            text-[12px]
-            text-[#9F9FA2]
-
-            sm:flex-row
-            sm:items-center
+            -translate-x-full
           "
+
+          style={{
+            width:
+              `${EDGE_CURVE_WIDTH}px`,
+          }}
         >
-          <p>
-            © {new Date().getFullYear()} THE DOT.
-            All rights reserved.
-          </p>
-
-          <Link
-            href="/book-a-call"
-
-            className="
-              font-sora
-              font-semibold
-
-              text-white
-
-              transition-opacity
-
-              hover:opacity-65
-            "
-          >
-            Book a discovery call →
-          </Link>
+          <EdgeCurve
+            tone="dark"
+          />
         </div>
       </div>
 
-      {/* ============================================================
-          WIDER WHITE CURVE
-         ============================================================ */}
+      {/* =================================================
+          CLOSE CONTROL
+         ================================================= */}
 
       <div
+        ref={closeControlRef}
+
         className="
           absolute
+
           right-0
           top-0
 
-          h-full
+          z-[20]
 
-          pointer-events-none
+          h-[100svh]
         "
 
         style={{
@@ -651,125 +1035,128 @@ export function FullscreenMenu({
       >
         <EdgeCurve
           tone="light"
-          pressed={closePressed}
         />
-      </div>
 
-      {/* ============================================================
-          CLOSE ICON INSIDE CURVE
-         ============================================================ */}
+        <button
+          type="button"
 
-      <button
-        type="button"
+          aria-label="Close navigation"
 
-        aria-label="Close navigation"
-
-        onClick={handleClose}
-
-        className="
-          group
-
-          absolute
-          right-0
-          top-1/2
-
-          z-[2]
-
-          flex
-          -translate-y-1/2
-
-          items-center
-          justify-center
-
-          border-0
-          bg-transparent
-
-          text-[#0B0C0D]
-
-          cursor-pointer
-          outline-none
-        "
-
-        style={{
-          width:
-            `${EDGE_CURVE_WIDTH}px`,
-
-          height:
-            "150px",
-        }}
-      >
-        <span
-          aria-hidden="true"
+          onClick={
+            handleClose
+          }
 
           className="
-            relative
+            group
 
-            block
+            absolute
 
-            h-[24px]
-            w-[24px]
+            right-0
+            top-1/2
+
+            z-[2]
+
+            flex
+
+            -translate-y-1/2
+
+            items-center
+            justify-center
+
+            border-0
+            bg-transparent
+
+            text-brand
+
+            cursor-pointer
+
+            outline-none
           "
 
-          /*
-           * Shift slightly toward the outside half
-           * of the visible white curve.
-           */
           style={{
-            transform:
-              "translateX(19px)",
+            width:
+              `${EDGE_CURVE_WIDTH}px`,
+
+            height:
+              "150px",
           }}
         >
           <span
+            aria-hidden="true"
+
             className="
-              absolute
-              left-1/2
-              top-1/2
+              relative
 
-              h-[2px]
-              w-[22px]
+              block
 
-              -translate-x-1/2
-              -translate-y-1/2
-
-              rotate-45
-
-              rounded-full
-
-              bg-current
+              h-[26px]
+              w-[26px]
 
               transition-transform
               duration-300
 
-              group-hover:rotate-[38deg]
+              group-hover:scale-[1.06]
             "
-          />
 
-          <span
-            className="
-              absolute
-              left-1/2
-              top-1/2
+            style={{
+              transform:
+                "translateX(16px)",
+            }}
+          >
+            <span
+              className="
+                absolute
 
-              h-[2px]
-              w-[22px]
+                left-1/2
+                top-1/2
 
-              -translate-x-1/2
-              -translate-y-1/2
+                h-[1.75px]
+                w-[24px]
 
-              -rotate-45
+                -translate-x-1/2
+                -translate-y-1/2
 
-              rounded-full
+                rotate-45
 
-              bg-current
+                rounded-full
 
-              transition-transform
-              duration-300
+                bg-brand
 
-              group-hover:-rotate-[38deg]
-            "
-          />
-        </span>
-      </button>
+                transition-transform
+                duration-300
+
+                group-hover:rotate-[39deg]
+              "
+            />
+
+            <span
+              className="
+                absolute
+
+                left-1/2
+                top-1/2
+
+                h-[1.75px]
+                w-[24px]
+
+                -translate-x-1/2
+                -translate-y-1/2
+
+                -rotate-45
+
+                rounded-full
+
+                bg-brand
+
+                transition-transform
+                duration-300
+
+                group-hover:-rotate-[39deg]
+              "
+            />
+          </span>
+        </button>
+      </div>
     </div>
   );
 }

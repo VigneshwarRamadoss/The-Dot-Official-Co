@@ -15,31 +15,28 @@ const sora = Sora({
     "600",
     "700",
   ],
-  variable: "--font-sora",
+  variable: "--font-sora-next",
   display: "swap",
 });
 
-const instrumentSerif =
-  Instrument_Serif({
-    subsets: ["latin"],
-    weight: "400",
-    style: [
-      "italic",
-      "normal",
-    ],
-    variable:
-      "--font-instrument-serif",
-    display: "swap",
-  });
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: [
+    "normal",
+    "italic",
+  ],
+  variable: "--font-instrument-next",
+  display: "swap",
+});
 
-export const metadata: Metadata =
-  {
-    title:
-      "THE DOT — Strategy, Design & Digital Product Studio",
+export const metadata: Metadata = {
+  title:
+    "THE DOT — Strategy, Design & Digital Product Studio",
 
-    description:
-      "We build brand identities, websites, and digital products for ambitious teams.",
-  };
+  description:
+    "We build brand identities, websites, and digital products for ambitious teams.",
+};
 
 export default function RootLayout({
   children,
@@ -52,6 +49,7 @@ export default function RootLayout({
       className={`
         ${sora.variable}
         ${instrumentSerif.variable}
+
         h-full
         antialiased
       `}
@@ -60,10 +58,10 @@ export default function RootLayout({
         className="
           min-h-full
 
-          bg-[#F5F5F5]
-          text-[#040404]
+          bg-white
+          text-brand
 
-          selection:bg-[#0B0D0E]
+          selection:bg-accent
           selection:text-white
         "
       >

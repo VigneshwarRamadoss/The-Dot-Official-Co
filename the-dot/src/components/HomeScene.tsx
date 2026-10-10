@@ -1,30 +1,48 @@
 "use client";
 
-import { useState } from "react";
 import { Hero } from "./Hero";
-import { TrustedClients } from "./TrustedClients";
 import { About } from "./About";
-import { Approach } from "./Approach";
+import { TrustedClients } from "./TrustedClients";
 import { WhyUs } from "./WhyUs";
 import { Footer } from "./Footer";
-import { ContactDialog } from "./ContactDialog";
 
-export function HomeScene() {
-  const [contactOpen, setContactOpen] = useState(false);
+interface HomeSceneProps {
+  heroReady: boolean;
+  onHeroMenuReady: () => void;
+}
 
+export function HomeScene({
+  heroReady,
+  onHeroMenuReady,
+}: HomeSceneProps) {
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
-      <Hero onOpenContact={() => setContactOpen(true)} />
-      <TrustedClients />
-      <About />
-      <Approach />
-      <WhyUs />
-      <Footer onOpenContact={() => setContactOpen(true)} />
+    <div
+      className="
+        min-h-screen
 
-      <ContactDialog
-        open={contactOpen}
-        onClose={() => setContactOpen(false)}
+        overflow-x-clip
+
+        bg-white
+        text-brand
+      "
+    >
+      <Hero
+        isReady={
+          heroReady
+        }
+
+        onMenuReady={
+          onHeroMenuReady
+        }
       />
+
+      <About />
+
+      <TrustedClients />
+
+      <WhyUs />
+
+      <Footer />
     </div>
   );
 }

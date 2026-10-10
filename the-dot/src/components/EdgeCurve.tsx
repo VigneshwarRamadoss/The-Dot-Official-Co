@@ -6,12 +6,7 @@ interface EdgeCurveProps {
   className?: string;
 }
 
-/*
- * Shared width for:
- * - black navigation opener
- * - white fullscreen-menu closer
- */
-export const EDGE_CURVE_WIDTH = 112;
+export const EDGE_CURVE_WIDTH = 120;
 
 export function EdgeCurve({
   tone,
@@ -26,50 +21,45 @@ export function EdgeCurve({
       className={`
         pointer-events-none
         relative
-        flex
         h-full
         w-full
-        items-center
-        justify-end
         ${className}
       `}
       style={{
         width: `${EDGE_CURVE_WIDTH}px`,
       }}
     >
-      {/*
-       * IMPORTANT:
-       *
-       * The curve occupies only the CENTER of the viewport.
-       * It does NOT run all the way from top to bottom.
-       *
-       * 76% gives the reference-like proportion.
-       */}
+      {/* 
+        The curve intentionally does NOT touch
+        the top or bottom of the viewport.
+      */}
+
       <div
         className="
-          relative
-          h-[76%]
+          absolute
+          left-0
+          top-12
           w-full
         "
         style={{
+          height: "calc(100% - 96px)",
+
           transformOrigin: "right center",
 
           transform: pressed
-            ? "translateX(-4px) scaleX(1.055) scaleY(1.008)"
+            ? "translateX(-5px) scaleX(1.075) scaleY(0.992)"
             : "translateX(0px) scaleX(1) scaleY(1)",
 
-          transition: `
-            transform 650ms cubic-bezier(.16,1,.3,1),
-            filter 650ms cubic-bezier(.16,1,.3,1)
-          `,
+          transition:
+            "transform 600ms cubic-bezier(.16,1,.3,1), filter 600ms cubic-bezier(.16,1,.3,1)",
 
           filter: pressed
-            ? "drop-shadow(-12px 0 22px rgba(0,0,0,0.15))"
-            : "drop-shadow(-5px 0 14px rgba(0,0,0,0.07))",
+            ? "drop-shadow(-14px 0 26px rgba(24,24,24,0.16))"
+            : "drop-shadow(-7px 0 18px rgba(24,24,24,0.08))",
         }}
       >
         <svg
-          viewBox="0 0 112 800"
+          viewBox="0 0 120 1000"
           preserveAspectRatio="none"
           className="
             h-full
@@ -78,221 +68,193 @@ export function EdgeCurve({
           "
         >
           <defs>
-            {isDark ? (
-              <>
-                <linearGradient
-                  id="edge-dome-dark"
-                  x1="0"
-                  y1="0"
-                  x2="1"
-                  y2="0"
-                >
-                  <stop
-                    offset="0%"
-                    stopColor="#202020"
-                  />
+            {/* DARK */}
 
-                  <stop
-                    offset="30%"
-                    stopColor="#121212"
-                  />
+            <linearGradient
+              id="dot-edge-dark"
+              x1="0"
+              y1="0"
+              x2="1"
+              y2="0"
+            >
+              <stop
+                offset="0%"
+                stopColor="#272020"
+              />
 
-                  <stop
-                    offset="68%"
-                    stopColor="#070707"
-                  />
+              <stop
+                offset="34%"
+                stopColor="#1E1818"
+              />
 
-                  <stop
-                    offset="100%"
-                    stopColor="#000000"
-                  />
-                </linearGradient>
+              <stop
+                offset="72%"
+                stopColor="#181818"
+              />
 
-                <linearGradient
-                  id="edge-dome-dark-gloss"
-                  x1="0"
-                  y1="0"
-                  x2="1"
-                  y2="0"
-                >
-                  <stop
-                    offset="0%"
-                    stopColor="#FFFFFF"
-                    stopOpacity="0.13"
-                  />
+              <stop
+                offset="100%"
+                stopColor="#181818"
+              />
+            </linearGradient>
 
-                  <stop
-                    offset="36%"
-                    stopColor="#FFFFFF"
-                    stopOpacity="0.045"
-                  />
+            <linearGradient
+              id="dot-edge-dark-highlight"
+              x1="0"
+              y1="0"
+              x2="1"
+              y2="0"
+            >
+              <stop
+                offset="0%"
+                stopColor="#472B2A"
+                stopOpacity="0.34"
+              />
 
-                  <stop
-                    offset="100%"
-                    stopColor="#FFFFFF"
-                    stopOpacity="0"
-                  />
-                </linearGradient>
-              </>
-            ) : (
-              <>
-                <linearGradient
-                  id="edge-dome-light"
-                  x1="0"
-                  y1="0"
-                  x2="1"
-                  y2="0"
-                >
-                  <stop
-                    offset="0%"
-                    stopColor="#E7E7E7"
-                  />
+              <stop
+                offset="46%"
+                stopColor="#FFFFFF"
+                stopOpacity="0.035"
+              />
 
-                  <stop
-                    offset="42%"
-                    stopColor="#F4F4F4"
-                  />
+              <stop
+                offset="100%"
+                stopColor="#FFFFFF"
+                stopOpacity="0"
+              />
+            </linearGradient>
 
-                  <stop
-                    offset="100%"
-                    stopColor="#FFFFFF"
-                  />
-                </linearGradient>
+            {/* LIGHT */}
 
-                <linearGradient
-                  id="edge-dome-light-gloss"
-                  x1="0"
-                  y1="0"
-                  x2="1"
-                  y2="0"
-                >
-                  <stop
-                    offset="0%"
-                    stopColor="#FFFFFF"
-                    stopOpacity="0.36"
-                  />
+            <linearGradient
+              id="dot-edge-light"
+              x1="0"
+              y1="0"
+              x2="1"
+              y2="0"
+            >
+              <stop
+                offset="0%"
+                stopColor="#F3F3F3"
+              />
 
-                  <stop
-                    offset="54%"
-                    stopColor="#FFFFFF"
-                    stopOpacity="0.11"
-                  />
+              <stop
+                offset="52%"
+                stopColor="#FAFAFA"
+              />
 
-                  <stop
-                    offset="100%"
-                    stopColor="#FFFFFF"
-                    stopOpacity="0"
-                  />
-                </linearGradient>
-              </>
-            )}
+              <stop
+                offset="100%"
+                stopColor="#FFFFFF"
+              />
+            </linearGradient>
+
+            <linearGradient
+              id="dot-edge-light-highlight"
+              x1="0"
+              y1="0"
+              x2="1"
+              y2="0"
+            >
+              <stop
+                offset="0%"
+                stopColor="#FFFFFF"
+                stopOpacity="0.7"
+              />
+
+              <stop
+                offset="100%"
+                stopColor="#FFFFFF"
+                stopOpacity="0"
+              />
+            </linearGradient>
           </defs>
 
-          {/*
-           * ============================================================
-           * TRUE SMOOTH DOME
-           * ============================================================
-           *
-           * TOP:
-           *   boundary begins at right edge
-           *
-           * CENTRE:
-           *   reaches x = 43
-           *
-           * BOTTOM:
-           *   returns to right edge
-           *
-           * Critical detail:
-           *
-           * First curve ends with:
-           *     control point x = 43
-           *
-           * Second curve begins with:
-           *     control point x = 43
-           *
-           * Therefore both curves share the SAME vertical tangent.
-           *
-           * Result:
-           * NO POINT.
-           * NO CUSP.
-           * NO HOURGLASS.
-           */}
+          {/* =================================================
+              ONE CONTINUOUS (
+              
+              Starts:
+              top-right
+
+              Moves:
+              smoothly left toward centre
+
+              Returns:
+              bottom-right
+             ================================================= */}
 
           <path
             d="
-              M112 0
+              M120 0
 
-              C108 105
-               52 245
-               52 400
+              C118 150
+               48 300
+               48 500
 
-              C52 555
-               108 695
-               112 800
+              C48 700
+               118 850
+               120 1000
 
-              L112 0
+              L120 0
               Z
             "
             fill={
               isDark
-                ? "url(#edge-dome-dark)"
-                : "url(#edge-dome-light)"
+                ? "url(#dot-edge-dark)"
+                : "url(#dot-edge-light)"
             }
           />
 
-          {/* Gloss uses exactly the same geometry */}
+          {/* Subtle surface lighting */}
+
           <path
             d="
-              M112 0
+              M120 0
 
-              C108 105
-               43 245
-               43 400
+              C118 150
+               48 300
+               48 500
 
-              C43 555
-               108 695
-               112 800
+              C48 700
+               118 850
+               120 1000
 
-              L112 0
+              L120 0
               Z
             "
             fill={
               isDark
-                ? "url(#edge-dome-dark-gloss)"
-                : "url(#edge-dome-light-gloss)"
+                ? "url(#dot-edge-dark-highlight)"
+                : "url(#dot-edge-light-highlight)"
             }
-            opacity="0.48"
           />
 
-          {/*
-           * Subtle polished contour.
-           *
-           * Same smooth tangent at center.
-           */}
+          {/* Extremely subtle contour */}
+
           <path
             d="
-              M111 5
+              M119 5
 
-              C107 108
-               45 247
-               45 400
+              C116 153
+               50 303
+               50 500
 
-              C45 553
-               107 692
-               111 795
+              C50 697
+               116 847
+               119 995
             "
             fill="none"
             stroke={
               isDark
                 ? "#FFFFFF"
-                : "#000000"
-            }
-            strokeOpacity={
-              isDark
-                ? "0.08"
-                : "0.045"
+                : "#181818"
             }
             strokeWidth="1"
+            strokeOpacity={
+              isDark
+                ? "0.055"
+                : "0.045"
+            }
           />
         </svg>
       </div>

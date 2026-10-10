@@ -23,18 +23,25 @@ export function NavigationTrigger({
   activeSection = "hero",
 }: NavigationTriggerProps) {
   const openTimerRef =
-    useRef<ReturnType<typeof setTimeout> | null>(null);
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
 
   const scrollEndTimerRef =
-    useRef<ReturnType<typeof setTimeout> | null>(null);
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
 
-  const [isHovered, setIsHovered] =
+  const [entered, setEntered] =
+    useState(false);
+
+  const [hovered, setHovered] =
     useState(false);
 
   const [edgeHovered, setEdgeHovered] =
     useState(false);
 
-  const [isPressed, setIsPressed] =
+  const [pressed, setPressed] =
     useState(false);
 
   const [hasScrolled, setHasScrolled] =
@@ -46,103 +53,123 @@ export function NavigationTrigger({
   const [reducedMotion, setReducedMotion] =
     useState(false);
 
-  /*
-  |--------------------------------------------------------------------------
-  | REDUCED MOTION
-  |--------------------------------------------------------------------------
-  */
+  /* =======================================================
+     REDUCED MOTION
+     ======================================================= */
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const media = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    );
+    const media =
+      window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      );
 
     const sync = () => {
-      setReducedMotion(media.matches);
+      setReducedMotion(
+        media.matches
+      );
     };
 
     sync();
 
-    media.addEventListener?.("change", sync);
+    media.addEventListener?.(
+      "change",
+      sync
+    );
 
     return () => {
-      media.removeEventListener?.("change", sync);
+      media.removeEventListener?.(
+        "change",
+        sync
+      );
     };
   }, []);
 
-  /*
-  |--------------------------------------------------------------------------
-  | ACTIVE SCENE SCROLL
-  |--------------------------------------------------------------------------
-  |
-  | IMPORTANT FIX:
-  |
-  | We attach the listener DIRECTLY to the currently active
-  | [data-scene-scroll] element.
-  |
-  | This is much more reliable than listening on document.
-  |
-  */
+  /* =======================================================
+     INITIAL ENTRANCE
+     ======================================================= */
 
   useEffect(() => {
-    if (typeof document === "undefined") return;
+    let secondFrame = 0;
 
+    const firstFrame =
+      requestAnimationFrame(
+        () => {
+          secondFrame =
+            requestAnimationFrame(
+              () => {
+                setEntered(true);
+              }
+            );
+        }
+      );
+
+    return () => {
+      cancelAnimationFrame(
+        firstFrame
+      );
+
+      if (secondFrame) {
+        cancelAnimationFrame(
+          secondFrame
+        );
+      }
+    };
+  }, []);
+
+  /* =======================================================
+     ACTIVE SCENE SCROLL
+     ======================================================= */
+
+  useEffect(() => {
     const scroller =
       document.querySelector<HTMLElement>(
         '[data-scene-scroll][data-active="true"]'
       );
 
-    if (!scroller) return;
+    if (!scroller) {
+      return;
+    }
 
     const handleScroll = () => {
-      const scrollTop = scroller.scrollTop;
+      const scrollTop =
+        scroller.scrollTop;
 
       /*
-       * At top:
-       * curve is allowed to return automatically.
+       * Back at top.
        */
+
       if (scrollTop <= 20) {
         setHasScrolled(false);
         setIsScrolling(false);
 
-        if (scrollEndTimerRef.current) {
+        if (
+          scrollEndTimerRef.current
+        ) {
           clearTimeout(
             scrollEndTimerRef.current
           );
 
-          scrollEndTimerRef.current = null;
+          scrollEndTimerRef.current =
+            null;
         }
 
         return;
       }
 
       /*
-       * ---------------------------------------------------------------
-       * CRITICAL FIX
-       * ---------------------------------------------------------------
-       *
-       * As soon as scrolling begins, kill all previous hover states.
-       *
-       * Otherwise:
-       *
-       * user clicked curve
-       * → mouse remains physically on right side
-       * → edgeHovered remains true
-       * → curve never disappears
+       * As soon as scrolling begins,
+       * remove stale hover states.
        */
 
-      setIsHovered(false);
+      setHovered(false);
       setEdgeHovered(false);
 
-      setIsScrolling(true);
       setHasScrolled(true);
+      setIsScrolling(true);
 
-      /*
-       * Scroll-end detection.
-       */
-      if (scrollEndTimerRef.current) {
+      if (
+        scrollEndTimerRef.current
+      ) {
         clearTimeout(
           scrollEndTimerRef.current
         );
@@ -157,10 +184,6 @@ export function NavigationTrigger({
         }, 260);
     };
 
-    /*
-     * Initialise correctly if returning to a scene
-     * that was previously scrolled.
-     */
     setHasScrolled(
       scroller.scrollTop > 20
     );
@@ -179,7 +202,9 @@ export function NavigationTrigger({
         handleScroll
       );
 
-      if (scrollEndTimerRef.current) {
+      if (
+        scrollEndTimerRef.current
+      ) {
         clearTimeout(
           scrollEndTimerRef.current
         );
@@ -188,51 +213,62 @@ export function NavigationTrigger({
           null;
       }
     };
-  }, [activeSection, isOpen]);
+  }, [
+    activeSection,
+    isOpen,
+  ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | SECTION / MENU STATE RESET
-  |--------------------------------------------------------------------------
-  */
+  /* =======================================================
+     SCENE RESET
+     ======================================================= */
 
   useEffect(() => {
-    setIsHovered(false);
+    setHovered(false);
     setEdgeHovered(false);
-    setIsPressed(false);
+    setPressed(false);
     setIsScrolling(false);
 
-    const raf = requestAnimationFrame(() => {
-      const scroller =
-        document.querySelector<HTMLElement>(
-          '[data-scene-scroll][data-active="true"]'
-        );
+    const frame =
+      requestAnimationFrame(
+        () => {
+          const scroller =
+            document.querySelector<HTMLElement>(
+              '[data-scene-scroll][data-active="true"]'
+            );
 
-      setHasScrolled(
-        (scroller?.scrollTop ?? 0) > 20
+          setHasScrolled(
+            (scroller?.scrollTop ?? 0) > 20
+          );
+        }
       );
-    });
 
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(
+        frame
+      );
     };
-  }, [activeSection, isOpen]);
+  }, [
+    activeSection,
+    isOpen,
+  ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | CLEANUP
-  |--------------------------------------------------------------------------
-  */
+  /* =======================================================
+     CLEANUP
+     ======================================================= */
 
   useEffect(() => {
     return () => {
-      if (openTimerRef.current) {
+      if (
+        openTimerRef.current
+      ) {
         clearTimeout(
           openTimerRef.current
         );
       }
 
-      if (scrollEndTimerRef.current) {
+      if (
+        scrollEndTimerRef.current
+      ) {
         clearTimeout(
           scrollEndTimerRef.current
         );
@@ -244,52 +280,40 @@ export function NavigationTrigger({
     return null;
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | VISIBILITY
-  |--------------------------------------------------------------------------
-  |
-  | At top:
-  | visible.
-  |
-  | Scrolled:
-  | hidden.
-  |
-  | While scrolling:
-  | always hidden.
-  |
-  | After scrolling:
-  | moving back to extreme right edge reveals it again.
-  |
-  */
+  /* =======================================================
+     VISIBILITY
+     ======================================================= */
 
   const visible =
+    entered &&
     !isScrolling &&
     (
       !hasScrolled ||
       edgeHovered ||
-      isHovered
+      hovered
     );
 
-  /*
-  |--------------------------------------------------------------------------
-  | OPEN MENU
-  |--------------------------------------------------------------------------
-  */
+  /* =======================================================
+     OPEN
+     ======================================================= */
 
   const handleOpen = () => {
-    if (openTimerRef.current) {
+    if (
+      openTimerRef.current
+    ) {
       return;
     }
 
-    setIsPressed(true);
+    setPressed(true);
 
     const delay =
-      reducedMotion ? 0 : 165;
+      reducedMotion
+        ? 0
+        : 150;
 
     openTimerRef.current =
       setTimeout(() => {
-        setIsPressed(false);
+        setPressed(false);
 
         openTimerRef.current =
           null;
@@ -300,15 +324,9 @@ export function NavigationTrigger({
 
   return (
     <>
-      {/* ================================================================
-          INVISIBLE RIGHT EDGE REVEAL ZONE
-
-          Always exists.
-
-          After scrolling:
-          move cursor to extreme right edge
-          → curve returns.
-         ================================================================ */}
+      {/* =================================================
+          EXTREME RIGHT REVEAL ZONE
+         ================================================= */}
 
       <div
         aria-hidden="true"
@@ -320,31 +338,31 @@ export function NavigationTrigger({
           z-[58]
 
           h-[100svh]
-          w-[32px]
+          w-[30px]
         "
         onMouseEnter={() => {
-          /*
-           * Don't allow it to immediately reappear
-           * while the user is actively scrolling.
-           */
-          if (isScrolling) return;
+          if (isScrolling) {
+            return;
+          }
 
           setEdgeHovered(true);
         }}
         onMouseLeave={() => {
-          if (!isHovered) {
+          if (!hovered) {
             setEdgeHovered(false);
           }
         }}
       />
 
-      {/* ================================================================
-          FLUID CURVED BODY
-         ================================================================ */}
+      {/* =================================================
+          CURVE
+         ================================================= */}
 
       <div
         aria-hidden="true"
         className="
+          pointer-events-none
+
           fixed
           right-0
           top-0
@@ -352,8 +370,6 @@ export function NavigationTrigger({
           z-[59]
 
           h-[100svh]
-
-          pointer-events-none
 
           will-change-transform
         "
@@ -364,64 +380,61 @@ export function NavigationTrigger({
           transformOrigin:
             "right center",
 
-          /*
-           * Slow liquid retreat.
-           *
-           * Instead of instantly shooting offscreen,
-           * it compresses horizontally and stretches
-           * slightly before leaving.
-           */
           transform: visible
-            ? `
-              translate3d(0,0,0)
-              scaleX(1)
-              scaleY(1)
-            `
+            ? hovered
+              ? `
+                translate3d(-3px,0,0)
+                scaleX(1.035)
+                scaleY(1.004)
+              `
+              : `
+                translate3d(0,0,0)
+                scaleX(1)
+                scaleY(1)
+              `
             : `
-              translate3d(${EDGE_CURVE_WIDTH + 18}px,0,0)
-              scaleX(0.7)
-              scaleY(1.025)
-            `,
+                translate3d(${EDGE_CURVE_WIDTH + 18}px,0,0)
+                scaleX(.66)
+                scaleY(1.025)
+              `,
 
           opacity:
-            visible ? 1 : 0,
+            visible
+              ? 1
+              : 0,
 
           filter:
             visible
               ? "blur(0px)"
-              : "blur(1.2px)",
+              : "blur(1px)",
 
-          transition: reducedMotion
-            ? `
-              transform 200ms ease,
-              opacity 180ms ease
-            `
-            : `
-              transform 950ms cubic-bezier(.22,1,.36,1),
-              opacity 760ms cubic-bezier(.22,1,.36,1),
-              filter 820ms cubic-bezier(.22,1,.36,1)
-            `,
+          transition:
+            reducedMotion
+              ? `
+                transform 180ms ease,
+                opacity 180ms ease
+              `
+              : `
+                transform 900ms cubic-bezier(.16,1,.3,1),
+                opacity 680ms cubic-bezier(.16,1,.3,1),
+                filter 700ms cubic-bezier(.16,1,.3,1)
+              `,
 
-          /*
-           * Tiny resistance before disappearing.
-           *
-           * Returning has no delay.
-           */
           transitionDelay:
             visible
-              ? "0ms"
-              : "90ms",
+              ? "30ms"
+              : "60ms",
         }}
       >
         <EdgeCurve
           tone="dark"
-          pressed={isPressed}
+          pressed={pressed}
         />
       </div>
 
-      {/* ================================================================
+      {/* =================================================
           HAMBURGER
-         ================================================================ */}
+         ================================================= */}
 
       <button
         type="button"
@@ -430,13 +443,15 @@ export function NavigationTrigger({
         aria-controls="fullscreen-menu"
         onClick={handleOpen}
         onMouseEnter={() => {
-          if (isScrolling) return;
+          if (isScrolling) {
+            return;
+          }
 
-          setIsHovered(true);
+          setHovered(true);
           setEdgeHovered(true);
         }}
         onMouseLeave={() => {
-          setIsHovered(false);
+          setHovered(false);
 
           if (hasScrolled) {
             setEdgeHovered(false);
@@ -444,12 +459,14 @@ export function NavigationTrigger({
         }}
         className="
           fixed
+
           right-0
           top-1/2
 
           z-[60]
 
           flex
+
           -translate-y-1/2
 
           items-center
@@ -469,24 +486,24 @@ export function NavigationTrigger({
           height: "150px",
 
           opacity:
-            visible ? 1 : 0,
+            visible
+              ? 1
+              : 0,
 
           pointerEvents:
-            visible && !isScrolling
+            visible &&
+            !isScrolling
               ? "auto"
               : "none",
 
-          transition: reducedMotion
-            ? "opacity 180ms ease"
-            : `
-              opacity
-              650ms
-              cubic-bezier(.22,1,.36,1)
-            `,
+          transition:
+            reducedMotion
+              ? "opacity 180ms ease"
+              : "opacity 600ms cubic-bezier(.22,1,.36,1)",
 
           transitionDelay:
             visible
-              ? "100ms"
+              ? "150ms"
               : "0ms",
         }}
       >
@@ -496,21 +513,22 @@ export function NavigationTrigger({
             absolute
 
             flex
-            w-[32px]
+            w-[34px]
 
             flex-col
+
             items-center
 
-            gap-[5px]
+            gap-[6px]
           "
           style={{
-            right: "18px",
+            right: "15px",
 
             transform:
-              isPressed
-                ? "scaleX(1.18) scaleY(0.84)"
-                : isHovered
-                ? "scaleX(1.06)"
+              pressed
+                ? "scaleX(1.16) scaleY(.82)"
+                : hovered
+                ? "scaleX(1.08)"
                 : "scale(1)",
 
             transition:
@@ -520,10 +538,12 @@ export function NavigationTrigger({
           <span
             className="
               block
+
               h-[1.5px]
-              w-[26px]
+              w-[27px]
 
               rounded-full
+
               bg-white
             "
           />
@@ -531,10 +551,12 @@ export function NavigationTrigger({
           <span
             className="
               block
+
               h-[1.5px]
-              w-[19px]
+              w-[20px]
 
               rounded-full
+
               bg-white
             "
           />
@@ -542,10 +564,12 @@ export function NavigationTrigger({
           <span
             className="
               block
+
               h-[1.5px]
-              w-[26px]
+              w-[27px]
 
               rounded-full
+
               bg-white
             "
           />

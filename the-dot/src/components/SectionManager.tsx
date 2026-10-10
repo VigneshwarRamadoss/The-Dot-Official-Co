@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  type ReactNode,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -8,8 +10,12 @@ import {
 
 import gsap from "gsap";
 
+import { Preloader } from "./Preloader";
+
 import { NavigationTrigger } from "./NavigationTrigger";
+
 import { FullscreenMenu } from "./FullscreenMenu";
+
 import { HomeScene } from "./HomeScene";
 import { Services } from "./Services";
 import { SelectedWork } from "./SelectedWork";
@@ -22,10 +28,48 @@ type SceneId =
   | "team";
 
 export function SectionManager() {
+  /*
+   * ======================================================
+   * PRELOADER
+   * ======================================================
+   */
+
+  const [
+    preloaderComplete,
+    setPreloaderComplete,
+  ] = useState(false);
+
+  /*
+   * ======================================================
+   * HERO → MENU HANDOFF
+   * ======================================================
+   *
+   * This becomes true when:
+   *
+   * small video
+   * → fullscreen video
+   * → video starts reducing left
+   *
+   * At that exact moment the right menu
+   * curve is mounted.
+   */
+
+  const [
+    heroMenuReady,
+    setHeroMenuReady,
+  ] = useState(false);
+
+  /*
+   * ======================================================
+   * SCENE STATE
+   * ======================================================
+   */
+
   const [
     activeSection,
     setActiveSection,
-  ] = useState<SceneId>("hero");
+  ] =
+    useState<SceneId>("hero");
 
   const [
     menuOpen,
@@ -46,11 +90,35 @@ export function SectionManager() {
     });
 
   /*
-   * Initial hash
+   * ======================================================
+   * CALLBACKS
+   * ======================================================
    */
+
+  const handlePreloaderComplete =
+    useCallback(() => {
+      setPreloaderComplete(
+        true
+      );
+    }, []);
+
+  const handleHeroMenuReady =
+    useCallback(() => {
+      setHeroMenuReady(
+        true
+      );
+    }, []);
+
+  /*
+   * ======================================================
+   * INITIAL URL
+   * ======================================================
+   */
+
   useEffect(() => {
     if (
-      typeof window === "undefined"
+      typeof window ===
+      "undefined"
     ) {
       return;
     }
@@ -78,16 +146,20 @@ export function SectionManager() {
       );
     }
 
-    /*
-     * Old contact hash now points
-     * directly to discovery call.
-     */
-    if (hash === "contact") {
+    if (
+      hash === "contact"
+    ) {
       window.location.replace(
         "/book-a-call"
       );
     }
   }, []);
+
+  /*
+   * ======================================================
+   * SCENE NAVIGATION
+   * ======================================================
+   */
 
   const navigateToSection = (
     target: string
@@ -107,7 +179,8 @@ export function SectionManager() {
       target as SceneId;
 
     if (
-      targetId === activeSection
+      targetId ===
+      activeSection
     ) {
       return;
     }
@@ -118,7 +191,9 @@ export function SectionManager() {
       ];
 
     const destination =
-      sceneRefs.current[targetId];
+      sceneRefs.current[
+        targetId
+      ];
 
     if (
       !current ||
@@ -127,10 +202,6 @@ export function SectionManager() {
       return;
     }
 
-    /*
-     * Destination always begins
-     * at top.
-     */
     destination.scrollTop = 0;
 
     const reduced =
@@ -138,7 +209,7 @@ export function SectionManager() {
         "(prefers-reduced-motion: reduce)"
       ).matches;
 
-    const hash =
+    const nextUrl =
       targetId === "hero"
         ? "/"
         : `/#${targetId}`;
@@ -146,86 +217,198 @@ export function SectionManager() {
     window.history.pushState(
       null,
       "",
-      hash
+      nextUrl
     );
 
+    /*
+     * ==================================================
+     * REDUCED MOTION
+     * ==================================================
+     */
+
     if (reduced) {
-      gsap.set(current, {
-        display: "none",
-      });
+      gsap.set(
+        current,
+        {
+          display:
+            "none",
+        }
+      );
 
       setActiveSection(
         targetId
       );
 
-      gsap.set(destination, {
-        display: "block",
-        opacity: 1,
-        y: 0,
-      });
+      gsap.set(
+        destination,
+        {
+          display:
+            "block",
+
+          opacity: 1,
+
+          y: 0,
+
+          scale: 1,
+        }
+      );
 
       return;
     }
 
-    const tl = gsap.timeline();
+    /*
+     * ==================================================
+     * SCENE TRANSITION
+     * ==================================================
+     */
 
-    tl.to(current, {
-      opacity: 0,
-      y: -20,
-      scale: 0.99,
-      duration: 0.3,
-      ease: "power2.inOut",
-    });
+    const timeline =
+      gsap.timeline();
 
-    tl.call(() => {
-      gsap.set(current, {
-        display: "none",
-      });
+    timeline.to(
+      current,
+      {
+        opacity: 0,
+
+        y: -20,
+
+        scale: 0.99,
+
+        duration: 0.3,
+
+        ease:
+          "power2.inOut",
+      }
+    );
+
+    timeline.call(() => {
+      gsap.set(
+        current,
+        {
+          display:
+            "none",
+        }
+      );
 
       setActiveSection(
         targetId
       );
 
-      gsap.set(destination, {
-        display: "block",
-        opacity: 0,
-        y: 28,
-        scale: 0.99,
-      });
+      gsap.set(
+        destination,
+        {
+          display:
+            "block",
+
+          opacity: 0,
+
+          y: 28,
+
+          scale: 0.99,
+        }
+      );
     });
 
-    tl.to(destination, {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      duration: 0.45,
-      ease: "power3.out",
-    });
+    timeline.to(
+      destination,
+      {
+        opacity: 1,
+
+        y: 0,
+
+        scale: 1,
+
+        duration: 0.45,
+
+        ease:
+          "power3.out",
+      }
+    );
   };
+
+  /*
+   * ======================================================
+   * HERO READINESS
+   * ======================================================
+   */
+
+  const heroReady =
+    preloaderComplete &&
+    activeSection === "hero";
+
+  /*
+   * On other direct routes:
+   * menu can appear immediately.
+   *
+   * On Home:
+   * menu waits until Hero full-screen
+   * video begins shrinking.
+   */
+
+  const navigationReady =
+    preloaderComplete &&
+    (
+      activeSection !== "hero" ||
+      heroMenuReady
+    );
+
+  /*
+   * ======================================================
+   * SCENES
+   * ======================================================
+   */
 
   const scenes: {
     id: SceneId;
-    node: React.ReactNode;
-    theme: "light" | "dark";
+
+    node: ReactNode;
+
+    theme:
+      | "light"
+      | "dark";
   }[] = [
     {
       id: "hero",
-      node: <HomeScene />,
+
+      node: (
+        <HomeScene
+          heroReady={
+            heroReady
+          }
+
+          onHeroMenuReady={
+            handleHeroMenuReady
+          }
+        />
+      ),
+
       theme: "light",
     },
+
     {
       id: "services",
-      node: <Services />,
+
+      node:
+        <Services />,
+
       theme: "light",
     },
+
     {
       id: "work",
-      node: <SelectedWork />,
-      theme: "dark",
+
+      node:
+        <SelectedWork />,
+
+      theme: "light",
     },
+
     {
       id: "team",
-      node: <Team />,
+
+      node:
+        <Team />,
+
       theme: "light",
     },
   ];
@@ -240,75 +423,140 @@ export function SectionManager() {
 
         overflow-hidden
 
-        bg-[#F5F5F5]
-        text-[#040404]
+        bg-white
+        text-brand
       "
     >
-      <NavigationTrigger
-        isOpen={menuOpen}
-        activeSection={
-          activeSection
-        }
-        onToggle={() =>
-          setMenuOpen(true)
-        }
-      />
+      {/* =================================================
+          PRELOADER
+         ================================================= */}
 
-      <FullscreenMenu
-        isOpen={menuOpen}
-        activeSection={
-          activeSection
-        }
-        onClose={() =>
-          setMenuOpen(false)
-        }
-        onSelectSection={
-          navigateToSection
-        }
-      />
+      {!preloaderComplete && (
+        <Preloader
+          onComplete={
+            handlePreloaderComplete
+          }
+        />
+      )}
 
-      {scenes.map((scene) => {
-        const active =
-          activeSection ===
-          scene.id;
+      {/* =================================================
+          RIGHT MENU
+         ================================================= */}
 
-        return (
-          <div
-            key={scene.id}
-            ref={(element) => {
-              sceneRefs.current[
+      {navigationReady && (
+        <>
+          <NavigationTrigger
+            isOpen={
+              menuOpen
+            }
+
+            activeSection={
+              activeSection
+            }
+
+            onToggle={() =>
+              setMenuOpen(
+                true
+              )
+            }
+          />
+
+          <FullscreenMenu
+            isOpen={
+              menuOpen
+            }
+
+            activeSection={
+              activeSection
+            }
+
+            onClose={() =>
+              setMenuOpen(
+                false
+              )
+            }
+
+            onSelectSection={
+              navigateToSection
+            }
+          />
+        </>
+      )}
+
+      {/* =================================================
+          SCENES
+         ================================================= */}
+
+      {scenes.map(
+        (scene) => {
+          const active =
+            activeSection ===
+            scene.id;
+
+          return (
+            <div
+              key={
                 scene.id
-              ] = element;
-            }}
-            data-scene-scroll
-            data-active={
-              active
-                ? "true"
-                : "false"
-            }
-            data-cursor-theme={
-              scene.theme
-            }
-            style={{
-              display: active
-                ? "block"
-                : "none",
-            }}
-            className="
-              absolute
-              inset-0
+              }
 
-              h-[100svh]
-              w-full
+              ref={(
+                element
+              ) => {
+                sceneRefs.current[
+                  scene.id
+                ] =
+                  element;
+              }}
 
-              overflow-x-hidden
-              overflow-y-auto
-            "
-          >
-            {scene.node}
-          </div>
-        );
-      })}
+              data-scene-scroll
+
+              data-active={
+                active
+                  ? "true"
+                  : "false"
+              }
+
+              data-cursor-theme={
+                scene.theme
+              }
+
+              style={{
+                display:
+                  active
+                    ? "block"
+                    : "none",
+
+                overflowY:
+                  preloaderComplete
+                    ? "auto"
+                    : "hidden",
+
+                pointerEvents:
+                  preloaderComplete
+                    ? "auto"
+                    : "none",
+              }}
+
+              className="
+                absolute
+                inset-0
+
+                h-[100svh]
+                w-full
+
+                overflow-x-hidden
+
+                bg-white
+                text-brand
+              "
+            >
+              {
+                scene.node
+              }
+            </div>
+          );
+        }
+      )}
     </div>
   );
 }
