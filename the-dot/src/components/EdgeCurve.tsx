@@ -29,9 +29,9 @@ export function EdgeCurve({
         width: `${EDGE_CURVE_WIDTH}px`,
       }}
     >
-      {/* 
-        The curve intentionally does NOT touch
-        the top or bottom of the viewport.
+      {/*
+        Curve intentionally begins below the top
+        and finishes above the bottom.
       */}
 
       <div
@@ -53,22 +53,35 @@ export function EdgeCurve({
           transition:
             "transform 600ms cubic-bezier(.16,1,.3,1), filter 600ms cubic-bezier(.16,1,.3,1)",
 
+          /*
+           * Dark shadow only.
+           *
+           * No light/glowing edge is produced here.
+           */
           filter: pressed
-            ? "drop-shadow(-14px 0 26px rgba(24,24,24,0.16))"
-            : "drop-shadow(-7px 0 18px rgba(24,24,24,0.08))",
+            ? "drop-shadow(-14px 0 26px rgba(24,24,24,0.18))"
+            : "drop-shadow(-7px 0 18px rgba(24,24,24,0.09))",
         }}
       >
         <svg
           viewBox="0 0 120 1000"
           preserveAspectRatio="none"
           className="
+            block
             h-full
             w-full
             overflow-visible
           "
         >
           <defs>
-            {/* DARK */}
+            {/* =================================================
+                DARK SURFACE
+
+                Kept very subtle.
+
+                No white stops.
+                No bright highlight.
+               ================================================= */}
 
             <linearGradient
               id="dot-edge-dark"
@@ -79,16 +92,16 @@ export function EdgeCurve({
             >
               <stop
                 offset="0%"
-                stopColor="#272020"
+                stopColor="#211B1B"
               />
 
               <stop
-                offset="34%"
-                stopColor="#1E1818"
+                offset="32%"
+                stopColor="#1C1818"
               />
 
               <stop
-                offset="72%"
+                offset="66%"
                 stopColor="#181818"
               />
 
@@ -98,33 +111,9 @@ export function EdgeCurve({
               />
             </linearGradient>
 
-            <linearGradient
-              id="dot-edge-dark-highlight"
-              x1="0"
-              y1="0"
-              x2="1"
-              y2="0"
-            >
-              <stop
-                offset="0%"
-                stopColor="#472B2A"
-                stopOpacity="0.34"
-              />
-
-              <stop
-                offset="46%"
-                stopColor="#FFFFFF"
-                stopOpacity="0.035"
-              />
-
-              <stop
-                offset="100%"
-                stopColor="#FFFFFF"
-                stopOpacity="0"
-              />
-            </linearGradient>
-
-            {/* LIGHT */}
+            {/* =================================================
+                LIGHT SURFACE
+               ================================================= */}
 
             <linearGradient
               id="dot-edge-light"
@@ -135,12 +124,12 @@ export function EdgeCurve({
             >
               <stop
                 offset="0%"
-                stopColor="#F3F3F3"
+                stopColor="#F1F1F1"
               />
 
               <stop
                 offset="52%"
-                stopColor="#FAFAFA"
+                stopColor="#F8F8F8"
               />
 
               <stop
@@ -148,6 +137,8 @@ export function EdgeCurve({
                 stopColor="#FFFFFF"
               />
             </linearGradient>
+
+            {/* Light tone can keep its subtle surface lighting */}
 
             <linearGradient
               id="dot-edge-light-highlight"
@@ -159,7 +150,13 @@ export function EdgeCurve({
               <stop
                 offset="0%"
                 stopColor="#FFFFFF"
-                stopOpacity="0.7"
+                stopOpacity="0.42"
+              />
+
+              <stop
+                offset="55%"
+                stopColor="#FFFFFF"
+                stopOpacity="0.1"
               />
 
               <stop
@@ -171,16 +168,11 @@ export function EdgeCurve({
           </defs>
 
           {/* =================================================
-              ONE CONTINUOUS (
-              
-              Starts:
-              top-right
+              MAIN CURVE
 
-              Moves:
-              smoothly left toward centre
-
-              Returns:
-              bottom-right
+                       (
+                      
+              One continuous smooth curve.
              ================================================= */}
 
           <path
@@ -205,57 +197,59 @@ export function EdgeCurve({
             }
           />
 
-          {/* Subtle surface lighting */}
+          {/* =================================================
+              LIGHT VERSION ONLY
 
-          <path
-            d="
-              M120 0
+              Important:
+              dark curve gets NO highlight overlay.
+             ================================================= */}
 
-              C118 150
-               48 300
-               48 500
+          {!isDark && (
+            <path
+              d="
+                M120 0
 
-              C48 700
-               118 850
-               120 1000
+                C118 150
+                 48 300
+                 48 500
 
-              L120 0
-              Z
-            "
-            fill={
-              isDark
-                ? "url(#dot-edge-dark-highlight)"
-                : "url(#dot-edge-light-highlight)"
-            }
-          />
+                C48 700
+                 118 850
+                 120 1000
 
-          {/* Extremely subtle contour */}
+                L120 0
+                Z
+              "
+              fill="url(#dot-edge-light-highlight)"
+            />
+          )}
 
-          <path
-            d="
-              M119 5
+          {/* =================================================
+              LIGHT VERSION CONTOUR ONLY
 
-              C116 153
-               50 303
-               50 500
+              The previous dark white stroke was responsible
+              for the visible pale trace.
+             ================================================= */}
 
-              C50 697
-               116 847
-               119 995
-            "
-            fill="none"
-            stroke={
-              isDark
-                ? "#FFFFFF"
-                : "#181818"
-            }
-            strokeWidth="1"
-            strokeOpacity={
-              isDark
-                ? "0.055"
-                : "0.045"
-            }
-          />
+          {!isDark && (
+            <path
+              d="
+                M119 5
+
+                C116 153
+                 50 303
+                 50 500
+
+                C50 697
+                 116 847
+                 119 995
+              "
+              fill="none"
+              stroke="#181818"
+              strokeWidth="1"
+              strokeOpacity="0.04"
+            />
+          )}
         </svg>
       </div>
     </div>

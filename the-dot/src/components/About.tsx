@@ -47,7 +47,9 @@ const SUPPORT_IMAGE =
 const STORY = [
   {
     number: "01",
-    eyebrow: "START WITH THE PROBLEM",
+
+    eyebrow:
+      "START WITH THE PROBLEM",
 
     title:
       "We understand before we build.",
@@ -58,6 +60,7 @@ const STORY = [
 
   {
     number: "02",
+
     eyebrow:
       "CONNECT THE DISCIPLINES",
 
@@ -70,7 +73,9 @@ const STORY = [
 
   {
     number: "03",
-    eyebrow: "BUILD WHAT MATTERS",
+
+    eyebrow:
+      "BUILD WHAT MATTERS",
 
     title:
       "Then we turn the thinking into useful digital experiences.",
@@ -100,16 +105,15 @@ export function About() {
   const byeBubbleRef =
     useRef<HTMLDivElement>(null);
 
-  const progressRef =
-    useRef<HTMLDivElement>(null);
-
   const panelRefs =
     useRef<
       Array<HTMLDivElement | null>
     >([]);
 
-  const [robotMode, setRobotMode] =
-    useState<RobotMode>("intro");
+  const [
+    robotMode,
+    setRobotMode,
+  ] = useState<RobotMode>("intro");
 
   const robotModeRef =
     useRef<RobotMode>("intro");
@@ -124,6 +128,7 @@ export function About() {
     }
 
     robotModeRef.current = next;
+
     setRobotMode(next);
   };
 
@@ -147,9 +152,6 @@ export function About() {
     const byeBubble =
       byeBubbleRef.current;
 
-    const progress =
-      progressRef.current;
-
     const panels =
       panelRefs.current.filter(
         (
@@ -164,7 +166,6 @@ export function About() {
       !robotStage ||
       !hiBubble ||
       !byeBubble ||
-      !progress ||
       panels.length !== STORY.length
     ) {
       return;
@@ -175,10 +176,8 @@ export function About() {
     );
 
     /*
-     * IMPORTANT:
-     *
-     * Your Home page does NOT scroll on window.
-     * It scrolls inside the active SceneManager container.
+     * Your Home page scrolls inside
+     * the active SceneManager container.
      */
 
     const scroller =
@@ -206,28 +205,37 @@ export function About() {
        ===================================================== */
 
     if (reduced) {
-      gsap.set(aboutLabel, {
-        opacity: 1,
-        y: 0,
-      });
+      gsap.set(
+        aboutLabel,
+        {
+          opacity: 1,
+          y: 0,
+        }
+      );
 
-      gsap.set(robotStage, {
-        opacity: 1,
-        x: 0,
-        y: 0,
-        scale: 1,
-      });
+      gsap.set(
+        robotStage,
+        {
+          opacity: 1,
 
-      gsap.set(panels, {
-        opacity: 0,
-        visibility: "hidden",
-      });
+          x: 0,
+          y: 0,
 
-      gsap.set(progress, {
-        scaleX: 1,
-      });
+          scale: 1,
+        }
+      );
 
-      changeRobotMode("exit");
+      gsap.set(
+        panels,
+        {
+          opacity: 0,
+          visibility: "hidden",
+        }
+      );
+
+      changeRobotMode(
+        "exit"
+      );
 
       return;
     }
@@ -237,628 +245,718 @@ export function About() {
        ===================================================== */
 
     const ctx =
-      gsap.context(() => {
-        /* ===============================================
-           INITIAL STATES
-           =============================================== */
+      gsap.context(
+        () => {
+          /* ===============================================
+             INITIAL STATES
+             =============================================== */
 
-        gsap.set(aboutLabel, {
-          opacity: 0,
-          y: -12,
-        });
+          gsap.set(
+            aboutLabel,
+            {
+              opacity: 0,
+              y: -12,
+            }
+          );
 
-        gsap.set(robotStage, {
-          opacity: 0,
+          gsap.set(
+            robotStage,
+            {
+              opacity: 0,
 
-          x: 0,
-          y: 70,
+              x: 0,
+              y: 70,
 
-          scale: 0.9,
-          rotation: 0,
+              scale: 0.9,
 
-          transformOrigin:
-            "50% 100%",
-        });
+              rotation: 0,
 
-        gsap.set(hiBubble, {
-          opacity: 0,
-          y: 10,
-          scale: 0.9,
-        });
+              transformOrigin:
+                "50% 100%",
+            }
+          );
 
-        gsap.set(byeBubble, {
-          opacity: 0,
-          y: 10,
-          scale: 0.9,
-        });
+          gsap.set(
+            hiBubble,
+            {
+              opacity: 0,
 
-        gsap.set(panels, {
-          opacity: 0,
-          y: 26,
+              y: 10,
 
-          visibility: "hidden",
-          pointerEvents: "none",
-        });
+              scale: 0.9,
+            }
+          );
 
-        gsap.set(progress, {
-          scaleX: 0,
+          gsap.set(
+            byeBubble,
+            {
+              opacity: 0,
 
-          transformOrigin:
-            "left center",
-        });
+              y: 10,
 
-        /* ===============================================
-           MASTER TIMELINE
+              scale: 0.9,
+            }
+          );
 
-           NO PINNING.
+          gsap.set(
+            panels,
+            {
+              opacity: 0,
 
-           CSS sticky handles the fixed viewport.
-           ScrollTrigger only calculates progress.
-           =============================================== */
+              y: 26,
 
-        const timeline =
-          gsap.timeline({
-            scrollTrigger: {
-              trigger: section,
+              visibility:
+                "hidden",
 
-              scroller,
+              pointerEvents:
+                "none",
+            }
+          );
 
-              start: "top top",
+          /* ===============================================
+             MASTER TIMELINE
 
-              /*
-               * Critical:
-               *
-               * Animation finishes at the exact point
-               * where the CSS sticky viewport releases.
-               */
-              end: "bottom bottom",
+             No GSAP pinning.
+             CSS sticky handles the viewport.
+             =============================================== */
 
-              /*
-               * Tiny interpolation only.
-               *
-               * No heavy catch-up.
-               */
-              scrub: 0.12,
+          const timeline =
+            gsap.timeline({
+              scrollTrigger: {
+                trigger:
+                  section,
 
-              invalidateOnRefresh:
-                true,
-            },
+                scroller,
+
+                start:
+                  "top top",
+
+                end:
+                  "bottom bottom",
+
+                scrub: 0.12,
+
+                invalidateOnRefresh:
+                  true,
+              },
+            });
+
+          /* =================================================
+             INTRO
+             ================================================= */
+
+          timeline.call(() => {
+            changeRobotMode(
+              "intro"
+            );
           });
 
-        /* =================================================
-           01 — INTRO
-           ================================================= */
+          timeline.to(
+            robotStage,
+            {
+              opacity: 1,
 
-        timeline.call(() => {
-          changeRobotMode("intro");
-        });
+              y: 0,
 
-        timeline.to(robotStage, {
-          opacity: 1,
+              scale: 1,
 
-          y: 0,
-          scale: 1,
+              duration: 0.28,
 
-          duration: 0.28,
-
-          ease: "power3.out",
-        });
-
-        /* =================================================
-           JUMP
-           ================================================= */
-
-        timeline.to(robotStage, {
-          y: -38,
-
-          duration: 0.13,
-
-          ease: "power2.out",
-        });
-
-        timeline.to(robotStage, {
-          y: 0,
-
-          duration: 0.18,
-
-          ease: "power2.in",
-        });
-
-        /*
-         * Landing compression.
-         */
-
-        timeline.to(robotStage, {
-          scaleX: 1.025,
-          scaleY: 0.975,
-
-          duration: 0.055,
-        });
-
-        timeline.to(robotStage, {
-          scaleX: 1,
-          scaleY: 1,
-
-          duration: 0.09,
-
-          ease: "power2.out",
-        });
-
-        /* =================================================
-           HI
-           ================================================= */
-
-        timeline.to(
-          hiBubble,
-          {
-            opacity: 1,
-
-            y: 0,
-            scale: 1,
-
-            duration: 0.16,
-
-            ease:
-              "back.out(1.4)",
-          },
-          "-=0.07"
-        );
-
-        /* =================================================
-           ABOUT US
-           ================================================= */
-
-        timeline.to(
-          aboutLabel,
-          {
-            opacity: 1,
-
-            y: 0,
-
-            duration: 0.19,
-
-            ease:
-              "power3.out",
-          },
-          "-=0.04"
-        );
-
-        timeline.to(
-          {},
-          {
-            duration: 0.16,
-          }
-        );
-
-        timeline.to(hiBubble, {
-          opacity: 0,
-
-          y: -6,
-          scale: 0.95,
-
-          duration: 0.12,
-        });
-
-        /* =================================================
-           ROBOT CENTER → LEFT
-           ================================================= */
-
-        timeline.call(() => {
-          changeRobotMode(
-            "story-1"
+              ease:
+                "power3.out",
+            }
           );
-        });
 
-        timeline.to(robotStage, {
-          x: leftPosition,
+          /* =================================================
+             JUMP
+             ================================================= */
 
-          y: 0,
+          timeline.to(
+            robotStage,
+            {
+              y: -38,
 
-          duration: 0.42,
+              duration: 0.13,
 
-          ease:
-            "power3.inOut",
-        });
-
-        /* =================================================
-           STORY 01
-           ================================================= */
-
-        timeline.set(panels[0], {
-          visibility: "visible",
-        });
-
-        timeline.to(panels[0], {
-          opacity: 1,
-
-          y: 0,
-
-          duration: 0.28,
-
-          ease: "power3.out",
-        });
-
-        timeline.to(
-          {},
-          {
-            duration: 0.5,
-          }
-        );
-
-        /* =================================================
-           01 → 02
-           ================================================= */
-
-        timeline.to(panels[0], {
-          opacity: 0,
-
-          y: -20,
-
-          duration: 0.22,
-
-          ease:
-            "power2.inOut",
-        });
-
-        timeline.set(panels[0], {
-          visibility: "hidden",
-        });
-
-        timeline.call(() => {
-          changeRobotMode(
-            "story-2"
+              ease:
+                "power2.out",
+            }
           );
-        });
 
-        /*
-         * Tiny body movement.
-         *
-         * Robot stays anchored LEFT.
-         */
+          timeline.to(
+            robotStage,
+            {
+              y: 0,
 
-        timeline.to(
-          robotStage,
-          {
-            y: 15,
+              duration: 0.18,
 
-            rotation: -1.7,
-
-            scale: 0.99,
-
-            duration: 0.17,
-
-            ease:
-              "sine.inOut",
-          },
-          "-=0.09"
-        );
-
-        timeline.to(robotStage, {
-          y: 0,
-
-          rotation: 0,
-          scale: 1,
-
-          duration: 0.22,
-
-          ease: "power2.out",
-        });
-
-        /* =================================================
-           STORY 02
-           ================================================= */
-
-        timeline.set(panels[1], {
-          visibility: "visible",
-        });
-
-        timeline.to(
-          panels[1],
-          {
-            opacity: 1,
-
-            y: 0,
-
-            duration: 0.28,
-
-            ease:
-              "power3.out",
-          },
-          "-=0.15"
-        );
-
-        timeline.to(
-          {},
-          {
-            duration: 0.5,
-          }
-        );
-
-        /* =================================================
-           02 → 03
-           ================================================= */
-
-        timeline.to(panels[1], {
-          opacity: 0,
-
-          y: -20,
-
-          duration: 0.22,
-
-          ease:
-            "power2.inOut",
-        });
-
-        timeline.set(panels[1], {
-          visibility: "hidden",
-        });
-
-        timeline.call(() => {
-          changeRobotMode(
-            "story-3"
+              ease:
+                "power2.in",
+            }
           );
-        });
 
-        timeline.to(
-          robotStage,
-          {
-            y: 14,
+          /* Landing compression */
 
-            rotation: 1.7,
+          timeline.to(
+            robotStage,
+            {
+              scaleX: 1.025,
 
-            scale: 0.99,
+              scaleY: 0.975,
 
-            duration: 0.17,
+              duration: 0.055,
+            }
+          );
 
-            ease:
-              "sine.inOut",
-          },
-          "-=0.09"
-        );
+          timeline.to(
+            robotStage,
+            {
+              scaleX: 1,
 
-        timeline.to(robotStage, {
-          y: 0,
+              scaleY: 1,
 
-          rotation: 0,
-          scale: 1,
+              duration: 0.09,
 
-          duration: 0.22,
+              ease:
+                "power2.out",
+            }
+          );
 
-          ease: "power2.out",
-        });
+          /* =================================================
+             HI
+             ================================================= */
 
-        /* =================================================
-           STORY 03
-           ================================================= */
+          timeline.to(
+            hiBubble,
+            {
+              opacity: 1,
 
-        timeline.set(panels[2], {
-          visibility: "visible",
-        });
+              y: 0,
 
-        timeline.to(
-          panels[2],
-          {
-            opacity: 1,
+              scale: 1,
 
-            y: 0,
+              duration: 0.16,
 
-            duration: 0.28,
+              ease:
+                "back.out(1.4)",
+            },
+            "-=0.07"
+          );
 
-            ease:
-              "power3.out",
-          },
-          "-=0.15"
-        );
+          /* =================================================
+             ABOUT US
+             ================================================= */
 
-        timeline.to(
-          {},
-          {
-            duration: 0.52,
-          }
-        );
+          timeline.to(
+            aboutLabel,
+            {
+              opacity: 1,
 
-        /* =================================================
-           STORY 03 → GOODBYE
-           ================================================= */
+              y: 0,
 
-        timeline.to(panels[2], {
-          opacity: 0,
+              duration: 0.19,
 
-          y: -18,
+              ease:
+                "power3.out",
+            },
+            "-=0.04"
+          );
 
-          duration: 0.22,
+          timeline.to(
+            {},
+            {
+              duration: 0.16,
+            }
+          );
 
-          ease:
-            "power2.inOut",
-        });
+          timeline.to(
+            hiBubble,
+            {
+              opacity: 0,
 
-        /*
-         * Return to centre at the same time.
-         */
+              y: -6,
+
+              scale: 0.95,
 
-        timeline.to(
-          robotStage,
-          {
-            x: 0,
+              duration: 0.12,
+            }
+          );
 
-            y: 0,
+          /* =================================================
+             ROBOT CENTER → LEFT
+             ================================================= */
 
-            rotation: 0,
+          timeline.call(() => {
+            changeRobotMode(
+              "story-1"
+            );
+          });
 
-            duration: 0.34,
+          timeline.to(
+            robotStage,
+            {
+              x:
+                leftPosition,
+
+              y: 0,
+
+              duration: 0.42,
 
-            ease:
-              "power3.inOut",
-          },
-          "-=0.11"
-        );
+              ease:
+                "power3.inOut",
+            }
+          );
 
-        timeline.set(panels[2], {
-          visibility: "hidden",
-        });
+          /* =================================================
+             STORY 01
+             ================================================= */
 
-        /* =================================================
-           FACE USER AGAIN
-           ================================================= */
-
-        timeline.call(() => {
-          changeRobotMode("intro");
-        });
-
-        timeline.to(robotStage, {
-          y: -5,
-
-          scale: 1.012,
-
-          duration: 0.1,
-
-          ease: "power2.out",
-        });
-
-        timeline.to(robotStage, {
-          y: 0,
-
-          scale: 1,
-
-          duration: 0.12,
-
-          ease:
-            "power2.inOut",
-        });
-
-        /* =================================================
-           BYE
-           ================================================= */
-
-        timeline.to(
-          byeBubble,
-          {
-            opacity: 1,
-
-            y: 0,
-
-            scale: 1,
-
-            duration: 0.16,
-
-            ease:
-              "back.out(1.4)",
-          },
-          "-=0.05"
-        );
-
-        timeline.to(
-          {},
-          {
-            duration: 0.18,
-          }
-        );
-
-        /* =================================================
-           TURN AROUND
-           ================================================= */
-
-        timeline.call(() => {
-          changeRobotMode("exit");
-        });
-
-        /*
-         * Let Three.js interpolate the turn.
-         */
-
-        timeline.to(
-          {},
-          {
-            duration: 0.36,
-          }
-        );
-
-        /* =================================================
-           BYE DISAPPEARS
-           ================================================= */
-
-        timeline.to(
-          byeBubble,
-          {
-            opacity: 0,
-
-            y: -5,
-            scale: 0.94,
-
-            duration: 0.12,
-
-            ease: "power2.in",
-          },
-          "-=0.15"
-        );
-
-        /* =================================================
-           FINAL STATE
-
-           Robot remains standing.
-           No fade.
-           No drop.
-           No additional hold.
-           ================================================= */
-
-        timeline.set(robotStage, {
-          opacity: 1,
-
-          x: 0,
-          y: 0,
-
-          scale: 1,
-
-          rotation: 0,
-
-          visibility: "visible",
-        });
-
-        timeline.set(byeBubble, {
-          opacity: 0,
-
-          visibility: "hidden",
-        });
-
-        timeline.set(aboutLabel, {
-          opacity: 1,
-          y: 0,
-        });
-
-        /* =================================================
-           PROGRESS
-           ================================================= */
-
-        gsap.to(progress, {
-          scaleX: 1,
-
-          ease: "none",
-
-          scrollTrigger: {
-            trigger: section,
-
-            scroller,
-
-            start: "top top",
-            end: "bottom bottom",
-
-            scrub: true,
-          },
-        });
-      }, section);
+          timeline.set(
+            panels[0],
+            {
+              visibility:
+                "visible",
+            }
+          );
+
+          timeline.to(
+            panels[0],
+            {
+              opacity: 1,
+
+              y: 0,
+
+              duration: 0.28,
+
+              ease:
+                "power3.out",
+            }
+          );
+
+          timeline.to(
+            {},
+            {
+              duration: 0.5,
+            }
+          );
+
+          /* =================================================
+             01 → 02
+             ================================================= */
+
+          timeline.to(
+            panels[0],
+            {
+              opacity: 0,
+
+              y: -20,
+
+              duration: 0.22,
+
+              ease:
+                "power2.inOut",
+            }
+          );
+
+          timeline.set(
+            panels[0],
+            {
+              visibility:
+                "hidden",
+            }
+          );
+
+          timeline.call(() => {
+            changeRobotMode(
+              "story-2"
+            );
+          });
+
+          timeline.to(
+            robotStage,
+            {
+              y: 15,
+
+              rotation:
+                -1.7,
+
+              scale: 0.99,
+
+              duration: 0.17,
+
+              ease:
+                "sine.inOut",
+            },
+            "-=0.09"
+          );
+
+          timeline.to(
+            robotStage,
+            {
+              y: 0,
+
+              rotation: 0,
+
+              scale: 1,
+
+              duration: 0.22,
+
+              ease:
+                "power2.out",
+            }
+          );
+
+          /* =================================================
+             STORY 02
+             ================================================= */
+
+          timeline.set(
+            panels[1],
+            {
+              visibility:
+                "visible",
+            }
+          );
+
+          timeline.to(
+            panels[1],
+            {
+              opacity: 1,
+
+              y: 0,
+
+              duration: 0.28,
+
+              ease:
+                "power3.out",
+            },
+            "-=0.15"
+          );
+
+          timeline.to(
+            {},
+            {
+              duration: 0.5,
+            }
+          );
+
+          /* =================================================
+             02 → 03
+             ================================================= */
+
+          timeline.to(
+            panels[1],
+            {
+              opacity: 0,
+
+              y: -20,
+
+              duration: 0.22,
+
+              ease:
+                "power2.inOut",
+            }
+          );
+
+          timeline.set(
+            panels[1],
+            {
+              visibility:
+                "hidden",
+            }
+          );
+
+          timeline.call(() => {
+            changeRobotMode(
+              "story-3"
+            );
+          });
+
+          timeline.to(
+            robotStage,
+            {
+              y: 14,
+
+              rotation:
+                1.7,
+
+              scale: 0.99,
+
+              duration: 0.17,
+
+              ease:
+                "sine.inOut",
+            },
+            "-=0.09"
+          );
+
+          timeline.to(
+            robotStage,
+            {
+              y: 0,
+
+              rotation: 0,
+
+              scale: 1,
+
+              duration: 0.22,
+
+              ease:
+                "power2.out",
+            }
+          );
+
+          /* =================================================
+             STORY 03
+             ================================================= */
+
+          timeline.set(
+            panels[2],
+            {
+              visibility:
+                "visible",
+            }
+          );
+
+          timeline.to(
+            panels[2],
+            {
+              opacity: 1,
+
+              y: 0,
+
+              duration: 0.28,
+
+              ease:
+                "power3.out",
+            },
+            "-=0.15"
+          );
+
+          timeline.to(
+            {},
+            {
+              duration: 0.52,
+            }
+          );
+
+          /* =================================================
+             STORY 03 → GOODBYE
+             ================================================= */
+
+          timeline.to(
+            panels[2],
+            {
+              opacity: 0,
+
+              y: -18,
+
+              duration: 0.22,
+
+              ease:
+                "power2.inOut",
+            }
+          );
+
+          /*
+           * Return robot to centre
+           * while final content disappears.
+           */
+
+          timeline.to(
+            robotStage,
+            {
+              x: 0,
+
+              y: 0,
+
+              rotation: 0,
+
+              duration: 0.34,
+
+              ease:
+                "power3.inOut",
+            },
+            "-=0.11"
+          );
+
+          timeline.set(
+            panels[2],
+            {
+              visibility:
+                "hidden",
+            }
+          );
+
+          /* =================================================
+             FACE USER AGAIN
+             ================================================= */
+
+          timeline.call(() => {
+            changeRobotMode(
+              "intro"
+            );
+          });
+
+          timeline.to(
+            robotStage,
+            {
+              y: -5,
+
+              scale: 1.012,
+
+              duration: 0.1,
+
+              ease:
+                "power2.out",
+            }
+          );
+
+          timeline.to(
+            robotStage,
+            {
+              y: 0,
+
+              scale: 1,
+
+              duration: 0.12,
+
+              ease:
+                "power2.inOut",
+            }
+          );
+
+          /* =================================================
+             BYE
+             ================================================= */
+
+          timeline.to(
+            byeBubble,
+            {
+              opacity: 1,
+
+              y: 0,
+
+              scale: 1,
+
+              duration: 0.16,
+
+              ease:
+                "back.out(1.4)",
+            },
+            "-=0.05"
+          );
+
+          timeline.to(
+            {},
+            {
+              duration: 0.18,
+            }
+          );
+
+          /* =================================================
+             TURN AROUND
+             ================================================= */
+
+          timeline.call(() => {
+            changeRobotMode(
+              "exit"
+            );
+          });
+
+          timeline.to(
+            {},
+            {
+              duration: 0.36,
+            }
+          );
+
+          /* =================================================
+             BYE DISAPPEARS
+             ================================================= */
+
+          timeline.to(
+            byeBubble,
+            {
+              opacity: 0,
+
+              y: -5,
+
+              scale: 0.94,
+
+              duration: 0.12,
+
+              ease:
+                "power2.in",
+            },
+            "-=0.15"
+          );
+
+          /* =================================================
+             FINAL STATE
+
+             Robot stays standing.
+             No fade.
+             No drop.
+             Normal scroll continues.
+             ================================================= */
+
+          timeline.set(
+            robotStage,
+            {
+              opacity: 1,
+
+              x: 0,
+
+              y: 0,
+
+              scale: 1,
+
+              rotation: 0,
+
+              visibility:
+                "visible",
+            }
+          );
+
+          timeline.set(
+            byeBubble,
+            {
+              opacity: 0,
+
+              visibility:
+                "hidden",
+            }
+          );
+
+          timeline.set(
+            aboutLabel,
+            {
+              opacity: 1,
+
+              y: 0,
+            }
+          );
+        },
+        section
+      );
 
     /*
-     * Wait one frame so all Three.js / image dimensions
-     * exist before ScrollTrigger measures the section.
+     * Wait one frame before ScrollTrigger
+     * measures the 3D/image layout.
      */
 
     const frame =
-      requestAnimationFrame(() => {
-        ScrollTrigger.refresh();
-      });
+      requestAnimationFrame(
+        () => {
+          ScrollTrigger.refresh();
+        }
+      );
 
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(
+        frame
+      );
 
       ctx.revert();
     };
@@ -872,29 +970,6 @@ export function About() {
     <section
       ref={sectionRef}
       id="about"
-
-      /*
-       * ===================================================
-       * CRITICAL ARCHITECTURE
-       * ===================================================
-       *
-       * 500svh total.
-       *
-       * Sticky viewport = 100svh.
-       *
-       * Therefore:
-       *
-       * 400svh scroll distance exists while the
-       * SAME About viewport remains in place.
-       *
-       * Once bottom meets bottom:
-       * sticky naturally releases.
-       *
-       * No GSAP pin.
-       * No overlapping spacer.
-       * No shaking.
-       */
-
       className="
         relative
 
@@ -933,8 +1008,9 @@ export function About() {
            ================================================= */}
 
         <div
-          ref={aboutLabelRef}
-
+          ref={
+            aboutLabelRef
+          }
           className="
             absolute
 
@@ -972,8 +1048,9 @@ export function About() {
            ================================================= */}
 
         <div
-          ref={robotStageRef}
-
+          ref={
+            robotStageRef
+          }
           className="
             pointer-events-none
 
@@ -1003,16 +1080,17 @@ export function About() {
           "
         >
           <RobotScene3D
-            mode={robotMode}
+            mode={
+              robotMode
+            }
           />
 
-          {/* =============================================
-              HI
-             ============================================= */}
+          {/* HI */}
 
           <div
-            ref={hiBubbleRef}
-
+            ref={
+              hiBubbleRef
+            }
             className="
               absolute
 
@@ -1050,13 +1128,12 @@ export function About() {
             </span>
           </div>
 
-          {/* =============================================
-              BYE
-             ============================================= */}
+          {/* BYE */}
 
           <div
-            ref={byeBubbleRef}
-
+            ref={
+              byeBubbleRef
+            }
             className="
               absolute
 
@@ -1105,12 +1182,17 @@ export function About() {
             index
           ) => (
             <div
-              key={item.number}
+              key={
+                item.number
+              }
 
-              ref={(element) => {
+              ref={(
+                element
+              ) => {
                 panelRefs.current[
                   index
-                ] = element;
+                ] =
+                  element;
               }}
 
               className="
@@ -1130,13 +1212,12 @@ export function About() {
                 md:max-w-[650px]
               "
             >
-              {/* =========================================
-                  COPY
-                 ========================================= */}
+              {/* COPY */}
 
               <div
                 className="
                   ml-auto
+
                   max-w-[610px]
                 "
               >
@@ -1165,7 +1246,9 @@ export function About() {
                       md:text-[11px]
                     "
                   >
-                    {item.number}
+                    {
+                      item.number
+                    }
                   </span>
 
                   <span
@@ -1193,7 +1276,9 @@ export function About() {
                       md:text-[11px]
                     "
                   >
-                    {item.eyebrow}
+                    {
+                      item.eyebrow
+                    }
                   </span>
                 </div>
 
@@ -1217,7 +1302,9 @@ export function About() {
                     lg:text-[52px]
                   "
                 >
-                  {item.title}
+                  {
+                    item.title
+                  }
                 </h2>
 
                 <p
@@ -1237,13 +1324,13 @@ export function About() {
                     md:text-[15px]
                   "
                 >
-                  {item.body}
+                  {
+                    item.body
+                  }
                 </p>
               </div>
 
-              {/* =========================================
-                  IMAGE
-                 ========================================= */}
+              {/* IMAGE */}
 
               <div
                 className="
@@ -1271,11 +1358,15 @@ export function About() {
                 "
               >
                 <img
-                  src={SUPPORT_IMAGE}
+                  src={
+                    SUPPORT_IMAGE
+                  }
 
                   alt="THE DOT robot turnaround"
 
-                  draggable={false}
+                  draggable={
+                    false
+                  }
 
                   className="
                     block
@@ -1296,37 +1387,6 @@ export function About() {
             </div>
           )
         )}
-
-        {/* =================================================
-            PROGRESS
-           ================================================= */}
-
-        <div
-          className="
-            absolute
-
-            bottom-0
-            left-0
-            right-0
-
-            z-50
-
-            h-[2px]
-
-            bg-black/[0.06]
-          "
-        >
-          <div
-            ref={progressRef}
-
-            className="
-              h-full
-              w-full
-
-              bg-accent
-            "
-          />
-        </div>
       </div>
     </section>
   );

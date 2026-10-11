@@ -1,10 +1,13 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
 } from "react";
+
+import gsap from "gsap";
 
 import {
   EdgeCurve,
@@ -13,182 +16,492 @@ import {
 
 interface NavigationTriggerProps {
   isOpen: boolean;
+  activeSection: string;
   onToggle: () => void;
-  activeSection?: string;
 }
+
+const MORPH_DURATION = 1.05;
+const MORPH_EASE = "power3.inOut";
+
+const COLLAPSED_SCALE_X = 0.018;
+
+/*
+ * How far the entire trigger moves beyond
+ * the right edge while WORK is active.
+ */
+const WORK_HIDE_X = EDGE_CURVE_WIDTH + 24;
 
 export function NavigationTrigger({
   isOpen,
+  activeSection,
   onToggle,
-  activeSection = "hero",
 }: NavigationTriggerProps) {
-  const openTimerRef =
-    useRef<ReturnType<typeof setTimeout> | null>(
-      null
-    );
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const scrollEndTimerRef =
-    useRef<ReturnType<typeof setTimeout> | null>(
-      null
-    );
+  const curveWrapperRef =
+    useRef<HTMLDivElement>(null);
 
-  const [entered, setEntered] =
-    useState(false);
+  const hamburgerRef =
+    useRef<HTMLSpanElement>(null);
 
-  const [hovered, setHovered] =
-    useState(false);
+  const scrollerRef =
+    useRef<HTMLElement | null>(null);
 
-  const [edgeHovered, setEdgeHovered] =
-    useState(false);
+  const collapsedRef = useRef(false);
+  const animatingRef = useRef(false);
 
-  const [pressed, setPressed] =
-    useState(false);
+  const workModeRef = useRef(false);
+  const workHiddenRef = useRef(false);
 
-  const [hasScrolled, setHasScrolled] =
-    useState(false);
-
-  const [isScrolling, setIsScrolling] =
-    useState(false);
-
-  const [reducedMotion, setReducedMotion] =
-    useState(false);
+  const [pressed, setPressed] = useState(false);
 
   /* =======================================================
-     REDUCED MOTION
+     LINE → CURVE
      ======================================================= */
 
-  useEffect(() => {
-    const media =
-      window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-      );
+  const expandCurve = useCallback(
+    (immediate = false) => {
+      const curve = curveWrapperRef.current;
+      const hamburger = hamburgerRef.current;
 
-    const sync = () => {
-      setReducedMotion(
-        media.matches
-      );
-    };
-
-    sync();
-
-    media.addEventListener?.(
-      "change",
-      sync
-    );
-
-    return () => {
-      media.removeEventListener?.(
-        "change",
-        sync
-      );
-    };
-  }, []);
-
-  /* =======================================================
-     INITIAL ENTRANCE
-     ======================================================= */
-
-  useEffect(() => {
-    let secondFrame = 0;
-
-    const firstFrame =
-      requestAnimationFrame(
-        () => {
-          secondFrame =
-            requestAnimationFrame(
-              () => {
-                setEntered(true);
-              }
-            );
-        }
-      );
-
-    return () => {
-      cancelAnimationFrame(
-        firstFrame
-      );
-
-      if (secondFrame) {
-        cancelAnimationFrame(
-          secondFrame
-        );
+      if (!curve || !hamburger) {
+        return;
       }
-    };
-  }, []);
+
+      collapsedRef.current = false;
+
+      gsap.killTweensOf([
+        curve,
+        hamburger,
+      ]);
+
+      if (immediate) {
+        gsap.set(curve, {
+          scaleX: 1,
+        });
+
+        gsap.set(hamburger, {
+          opacity: 1,
+          scale: 1,
+          x: 0,
+        });
+
+        return;
+      }
+
+      animatingRef.current = true;
+
+      const timeline = gsap.timeline({
+        onComplete: () => {
+          animatingRef.current = false;
+        },
+      });
+
+      timeline.to(curve, {
+        scaleX: 1,
+        duration: MORPH_DURATION,
+        ease: MORPH_EASE,
+        overwrite: "auto",
+      });
+
+      timeline.to(
+        hamburger,
+        {
+          opacity: 1,
+          scale: 1,
+          x: 0,
+          duration: 0.32,
+          ease: "power2.out",
+        },
+        "-=0.38"
+      );
+    },
+    []
+  );
 
   /* =======================================================
-     ACTIVE SCENE SCROLL
+     CURVE → LINE
      ======================================================= */
 
-  useEffect(() => {
-    const scroller =
-      document.querySelector<HTMLElement>(
-        '[data-scene-scroll][data-active="true"]'
+  const collapseCurve = useCallback(
+    (immediate = false) => {
+      const curve = curveWrapperRef.current;
+      const hamburger = hamburgerRef.current;
+
+      if (!curve || !hamburger) {
+        return;
+      }
+
+      collapsedRef.current = true;
+
+      gsap.killTweensOf([
+        curve,
+        hamburger,
+      ]);
+
+      if (immediate) {
+        gsap.set(hamburger, {
+          opacity: 0,
+          scale: 0.82,
+          x: 8,
+        });
+
+        gsap.set(curve, {
+          scaleX: COLLAPSED_SCALE_X,
+        });
+
+        return;
+      }
+
+      animatingRef.current = true;
+
+      const timeline = gsap.timeline({
+        onComplete: () => {
+          animatingRef.current = false;
+        },
+      });
+
+      timeline.to(hamburger, {
+        opacity: 0,
+        scale: 0.82,
+        x: 8,
+        duration: 0.22,
+        ease: "power2.in",
+      });
+
+      timeline.to(
+        curve,
+        {
+          scaleX: COLLAPSED_SCALE_X,
+          duration: MORPH_DURATION,
+          ease: MORPH_EASE,
+          overwrite: "auto",
+        },
+        "-=0.08"
+      );
+    },
+    []
+  );
+
+  /* =======================================================
+     WORK → HIDE COMPLETELY
+
+     curve → edge line → outside viewport
+     ======================================================= */
+
+  const hideForWork = useCallback(
+    (immediate = false) => {
+      const button = buttonRef.current;
+      const curve = curveWrapperRef.current;
+      const hamburger = hamburgerRef.current;
+
+      if (
+        !button ||
+        !curve ||
+        !hamburger
+      ) {
+        return;
+      }
+
+      if (workHiddenRef.current) {
+        return;
+      }
+
+      workHiddenRef.current = true;
+      collapsedRef.current = true;
+
+      gsap.killTweensOf([
+        button,
+        curve,
+        hamburger,
+      ]);
+
+      if (immediate) {
+        gsap.set(hamburger, {
+          opacity: 0,
+          scale: 0.82,
+          x: 8,
+        });
+
+        gsap.set(curve, {
+          scaleX: COLLAPSED_SCALE_X,
+        });
+
+        gsap.set(button, {
+          x: WORK_HIDE_X,
+        });
+
+        return;
+      }
+
+      animatingRef.current = true;
+
+      const timeline = gsap.timeline({
+        onComplete: () => {
+          animatingRef.current = false;
+        },
+      });
+
+      timeline.to(
+        hamburger,
+        {
+          opacity: 0,
+          scale: 0.82,
+          x: 8,
+          duration: 0.18,
+          ease: "power2.in",
+        },
+        0
       );
 
-    if (!scroller) {
-      return;
-    }
+      timeline.to(
+        curve,
+        {
+          scaleX: COLLAPSED_SCALE_X,
+          duration: 0.68,
+          ease: "power3.inOut",
+        },
+        0.03
+      );
 
-    const handleScroll = () => {
-      const scrollTop =
-        scroller.scrollTop;
+      timeline.to(
+        button,
+        {
+          x: WORK_HIDE_X,
+          duration: 0.68,
+          ease: "power3.inOut",
+          overwrite: "auto",
+        },
+        0.2
+      );
+    },
+    []
+  );
+
+  /* =======================================================
+     WORK EDGE HOVER → REVEAL
+     ======================================================= */
+
+  const revealForWork = useCallback(
+    (immediate = false) => {
+      const button = buttonRef.current;
+      const curve = curveWrapperRef.current;
+      const hamburger = hamburgerRef.current;
+
+      if (
+        !button ||
+        !curve ||
+        !hamburger
+      ) {
+        return;
+      }
+
+      workHiddenRef.current = false;
+      collapsedRef.current = false;
+
+      gsap.killTweensOf([
+        button,
+        curve,
+        hamburger,
+      ]);
+
+      if (immediate) {
+        gsap.set(button, {
+          x: 0,
+        });
+
+        gsap.set(curve, {
+          scaleX: 1,
+        });
+
+        gsap.set(hamburger, {
+          opacity: 1,
+          scale: 1,
+          x: 0,
+        });
+
+        return;
+      }
+
+      animatingRef.current = true;
+
+      const timeline = gsap.timeline({
+        onComplete: () => {
+          animatingRef.current = false;
+        },
+      });
 
       /*
-       * Back at top.
+       * Bring the line back first.
        */
+      timeline.to(button, {
+        x: 0,
+        duration: 0.62,
+        ease: "power3.out",
+        overwrite: "auto",
+      });
 
-      if (scrollTop <= 20) {
-        setHasScrolled(false);
-        setIsScrolling(false);
+      /*
+       * Then let it bloom into the curve.
+       */
+      timeline.to(
+        curve,
+        {
+          scaleX: 1,
+          duration: 0.82,
+          ease: MORPH_EASE,
+        },
+        0.12
+      );
 
-        if (
-          scrollEndTimerRef.current
-        ) {
-          clearTimeout(
-            scrollEndTimerRef.current
-          );
+      timeline.to(
+        hamburger,
+        {
+          opacity: 1,
+          scale: 1,
+          x: 0,
+          duration: 0.3,
+          ease: "power2.out",
+        },
+        0.54
+      );
+    },
+    []
+  );
 
-          scrollEndTimerRef.current =
-            null;
+  /* =======================================================
+     DETECT WHETHER WORK OWNS THE VIEWPORT
+     ======================================================= */
+
+  const isInsideWork = useCallback(
+    (scroller: HTMLElement) => {
+      const work =
+        document.getElementById("work");
+
+      if (!work) {
+        return false;
+      }
+
+      const rootRect =
+        scroller.getBoundingClientRect();
+
+      const workRect =
+        work.getBoundingClientRect();
+
+      /*
+       * Slightly above the exact center gives the
+       * disappearance a more natural timing.
+       */
+      const probe =
+        rootRect.top +
+        rootRect.height * 0.43;
+
+      return (
+        workRect.top <= probe &&
+        workRect.bottom >= probe
+      );
+    },
+    []
+  );
+
+  /* =======================================================
+     NORMAL / WORK SCROLL STATE
+     ======================================================= */
+
+  useEffect(() => {
+    const findActiveScroller = () => {
+      const active =
+        document.querySelector<HTMLElement>(
+          '[data-scene-scroll][data-active="true"]'
+        );
+
+      scrollerRef.current = active;
+
+      return active;
+    };
+
+    let scroller = findActiveScroller();
+
+    const syncNavigation = (
+      immediate = false
+    ) => {
+      scroller =
+        scrollerRef.current ??
+        findActiveScroller();
+
+      if (!scroller) {
+        return;
+      }
+
+      const inWork =
+        isInsideWork(scroller);
+
+      workModeRef.current = inWork;
+
+      /*
+       * Fullscreen menu owns the navigation
+       * while open.
+       */
+      if (isOpen) {
+        return;
+      }
+
+      /* =============================================
+         WORK
+         ============================================= */
+
+      if (inWork) {
+        hideForWork(immediate);
+        return;
+      }
+
+      /* =============================================
+         EXIT WORK
+         ============================================= */
+
+      if (workHiddenRef.current) {
+        workHiddenRef.current = false;
+
+        if (buttonRef.current) {
+          if (immediate) {
+            gsap.set(buttonRef.current, {
+              x: 0,
+            });
+          } else {
+            gsap.to(buttonRef.current, {
+              x: 0,
+              duration: 0.62,
+              ease: "power3.out",
+              overwrite: "auto",
+            });
+          }
+        }
+      }
+
+      /* =============================================
+         NORMAL NAVIGATION BEHAVIOUR
+         ============================================= */
+
+      if (scroller.scrollTop <= 20) {
+        if (collapsedRef.current) {
+          expandCurve(immediate);
         }
 
         return;
       }
 
-      /*
-       * As soon as scrolling begins,
-       * remove stale hover states.
-       */
-
-      setHovered(false);
-      setEdgeHovered(false);
-
-      setHasScrolled(true);
-      setIsScrolling(true);
-
-      if (
-        scrollEndTimerRef.current
-      ) {
-        clearTimeout(
-          scrollEndTimerRef.current
-        );
+      if (!collapsedRef.current) {
+        collapseCurve(immediate);
       }
-
-      scrollEndTimerRef.current =
-        setTimeout(() => {
-          setIsScrolling(false);
-
-          scrollEndTimerRef.current =
-            null;
-        }, 260);
     };
 
-    setHasScrolled(
-      scroller.scrollTop > 20
-    );
+    syncNavigation(true);
 
-    scroller.addEventListener(
+    const handleScroll = () => {
+      syncNavigation(false);
+    };
+
+    scroller?.addEventListener(
       "scroll",
       handleScroll,
       {
@@ -196,354 +509,392 @@ export function NavigationTrigger({
       }
     );
 
+    /* ===============================================
+       WATCH ACTIVE SCENE
+       =============================================== */
+
+    const observer =
+      new MutationObserver(() => {
+        const nextScroller =
+          findActiveScroller();
+
+        if (
+          nextScroller === scroller
+        ) {
+          return;
+        }
+
+        scroller?.removeEventListener(
+          "scroll",
+          handleScroll
+        );
+
+        scroller = nextScroller;
+
+        scroller?.addEventListener(
+          "scroll",
+          handleScroll,
+          {
+            passive: true,
+          }
+        );
+
+        syncNavigation(true);
+      });
+
+    observer.observe(
+      document.body,
+      {
+        subtree: true,
+        attributes: true,
+        attributeFilter: [
+          "data-active",
+        ],
+      }
+    );
+
     return () => {
-      scroller.removeEventListener(
+      scroller?.removeEventListener(
         "scroll",
         handleScroll
       );
 
-      if (
-        scrollEndTimerRef.current
-      ) {
-        clearTimeout(
-          scrollEndTimerRef.current
-        );
-
-        scrollEndTimerRef.current =
-          null;
-      }
+      observer.disconnect();
     };
   }, [
     activeSection,
+    collapseCurve,
+    expandCurve,
+    hideForWork,
+    isInsideWork,
     isOpen,
   ]);
 
   /* =======================================================
-     SCENE RESET
+     MENU OPEN / CLOSE
      ======================================================= */
 
   useEffect(() => {
-    setHovered(false);
-    setEdgeHovered(false);
-    setPressed(false);
-    setIsScrolling(false);
+    if (isOpen) {
+      /*
+       * Menu opening still uses the
+       * normal curve → line motion.
+       */
+      collapseCurve();
 
-    const frame =
-      requestAnimationFrame(
-        () => {
-          const scroller =
-            document.querySelector<HTMLElement>(
-              '[data-scene-scroll][data-active="true"]'
-            );
+      return;
+    }
 
-          setHasScrolled(
-            (scroller?.scrollTop ?? 0) > 20
-          );
+    const scroller =
+      document.querySelector<HTMLElement>(
+        '[data-scene-scroll][data-active="true"]'
+      );
+
+    if (!scroller) {
+      expandCurve();
+      return;
+    }
+
+    const inWork =
+      isInsideWork(scroller);
+
+    workModeRef.current = inWork;
+
+    if (inWork) {
+      hideForWork();
+      return;
+    }
+
+    if (workHiddenRef.current) {
+      workHiddenRef.current = false;
+
+      if (buttonRef.current) {
+        gsap.to(buttonRef.current, {
+          x: 0,
+          duration: 0.6,
+          ease: "power3.out",
+          overwrite: "auto",
+        });
+      }
+    }
+
+    if (scroller.scrollTop <= 20) {
+      expandCurve();
+    } else {
+      collapseCurve();
+    }
+  }, [
+    isOpen,
+    collapseCurve,
+    expandCurve,
+    hideForWork,
+    isInsideWork,
+  ]);
+
+  /* =======================================================
+     RIGHT EDGE HOVER
+     ======================================================= */
+
+  useEffect(() => {
+    const handlePointerMove = (
+      event: PointerEvent
+    ) => {
+      if (isOpen) {
+        return;
+      }
+
+      const distanceFromRight =
+        window.innerWidth -
+        event.clientX;
+
+      /* =============================================
+         WORK MODE
+         ============================================= */
+
+      if (workModeRef.current) {
+        /*
+         * Cursor reaches edge:
+         * reveal the curved menu.
+         */
+        if (distanceFromRight <= 30) {
+          if (workHiddenRef.current) {
+            revealForWork();
+          }
+
+          return;
         }
-      );
 
-    return () => {
-      cancelAnimationFrame(
-        frame
-      );
-    };
-  }, [
-    activeSection,
-    isOpen,
-  ]);
+        /*
+         * Cursor leaves menu region:
+         * hide it again.
+         */
+        if (
+          distanceFromRight >= 170 &&
+          !workHiddenRef.current &&
+          !animatingRef.current
+        ) {
+          hideForWork();
+        }
 
-  /* =======================================================
-     CLEANUP
-     ======================================================= */
-
-  useEffect(() => {
-    return () => {
-      if (
-        openTimerRef.current
-      ) {
-        clearTimeout(
-          openTimerRef.current
-        );
+        return;
       }
 
+      /* =============================================
+         NORMAL MODE
+         ============================================= */
+
+      if (distanceFromRight <= 24) {
+        if (collapsedRef.current) {
+          expandCurve();
+        }
+
+        return;
+      }
+
+      const scroller =
+        scrollerRef.current;
+
       if (
-        scrollEndTimerRef.current
+        distanceFromRight > 130 &&
+        scroller &&
+        scroller.scrollTop > 20 &&
+        !collapsedRef.current &&
+        !animatingRef.current
       ) {
-        clearTimeout(
-          scrollEndTimerRef.current
-        );
+        collapseCurve();
       }
     };
-  }, []);
 
-  if (isOpen) {
-    return null;
-  }
-
-  /* =======================================================
-     VISIBILITY
-     ======================================================= */
-
-  const visible =
-    entered &&
-    !isScrolling &&
-    (
-      !hasScrolled ||
-      edgeHovered ||
-      hovered
+    window.addEventListener(
+      "pointermove",
+      handlePointerMove,
+      {
+        passive: true,
+      }
     );
 
+    return () => {
+      window.removeEventListener(
+        "pointermove",
+        handlePointerMove
+      );
+    };
+  }, [
+    collapseCurve,
+    expandCurve,
+    hideForWork,
+    isOpen,
+    revealForWork,
+  ]);
+
   /* =======================================================
-     OPEN
+     CLICK
      ======================================================= */
 
-  const handleOpen = () => {
-    if (
-      openTimerRef.current
-    ) {
+  const handleClick = () => {
+    if (collapsedRef.current) {
+      if (workModeRef.current) {
+        revealForWork();
+      } else {
+        expandCurve();
+      }
+
       return;
     }
 
     setPressed(true);
 
-    const delay =
-      reducedMotion
-        ? 0
-        : 150;
+    window.setTimeout(() => {
+      setPressed(false);
+    }, 200);
 
-    openTimerRef.current =
-      setTimeout(() => {
-        setPressed(false);
-
-        openTimerRef.current =
-          null;
-
-        onToggle();
-      }, delay);
+    onToggle();
   };
+
+  /* =======================================================
+     JSX
+     ======================================================= */
 
   return (
     <>
       {/* =================================================
-          EXTREME RIGHT REVEAL ZONE
+          INVISIBLE RIGHT EDGE SENSOR
+
+          This remains even while the actual curve is
+          outside the screen.
          ================================================= */}
 
-      <div
-        aria-hidden="true"
-        className="
-          fixed
-          right-0
-          top-0
+      {!isOpen && (
+        <div
+          aria-hidden="true"
+          className="
+            fixed
+            bottom-0
+            right-0
+            top-0
 
-          z-[58]
+            z-[88]
 
-          h-[100svh]
-          w-[30px]
-        "
-        onMouseEnter={() => {
-          if (isScrolling) {
-            return;
-          }
+            w-[24px]
+          "
+          onPointerEnter={() => {
+            if (workModeRef.current) {
+              revealForWork();
+              return;
+            }
 
-          setEdgeHovered(true);
-        }}
-        onMouseLeave={() => {
-          if (!hovered) {
-            setEdgeHovered(false);
-          }
-        }}
-      />
-
-      {/* =================================================
-          CURVE
-         ================================================= */}
-
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-
-          fixed
-          right-0
-          top-0
-
-          z-[59]
-
-          h-[100svh]
-
-          will-change-transform
-        "
-        style={{
-          width:
-            `${EDGE_CURVE_WIDTH}px`,
-
-          transformOrigin:
-            "right center",
-
-          transform: visible
-            ? hovered
-              ? `
-                translate3d(-3px,0,0)
-                scaleX(1.035)
-                scaleY(1.004)
-              `
-              : `
-                translate3d(0,0,0)
-                scaleX(1)
-                scaleY(1)
-              `
-            : `
-                translate3d(${EDGE_CURVE_WIDTH + 18}px,0,0)
-                scaleX(.66)
-                scaleY(1.025)
-              `,
-
-          opacity:
-            visible
-              ? 1
-              : 0,
-
-          filter:
-            visible
-              ? "blur(0px)"
-              : "blur(1px)",
-
-          transition:
-            reducedMotion
-              ? `
-                transform 180ms ease,
-                opacity 180ms ease
-              `
-              : `
-                transform 900ms cubic-bezier(.16,1,.3,1),
-                opacity 680ms cubic-bezier(.16,1,.3,1),
-                filter 700ms cubic-bezier(.16,1,.3,1)
-              `,
-
-          transitionDelay:
-            visible
-              ? "30ms"
-              : "60ms",
-        }}
-      >
-        <EdgeCurve
-          tone="dark"
-          pressed={pressed}
+            if (collapsedRef.current) {
+              expandCurve();
+            }
+          }}
         />
-      </div>
+      )}
 
       {/* =================================================
-          HAMBURGER
+          NAVIGATION BUTTON
          ================================================= */}
 
       <button
+        ref={buttonRef}
         type="button"
         aria-label="Open navigation"
-        aria-expanded={isOpen}
-        aria-controls="fullscreen-menu"
-        onClick={handleOpen}
-        onMouseEnter={() => {
-          if (isScrolling) {
-            return;
+        onClick={handleClick}
+        onPointerDown={() => {
+          if (!collapsedRef.current) {
+            setPressed(true);
           }
-
-          setHovered(true);
-          setEdgeHovered(true);
         }}
-        onMouseLeave={() => {
-          setHovered(false);
-
-          if (hasScrolled) {
-            setEdgeHovered(false);
-          }
+        onPointerUp={() => {
+          setPressed(false);
+        }}
+        onPointerCancel={() => {
+          setPressed(false);
+        }}
+        onPointerLeave={() => {
+          setPressed(false);
         }}
         className="
           fixed
-
+          bottom-0
           right-0
-          top-1/2
+          top-0
 
-          z-[60]
+          z-[90]
 
           flex
-
-          -translate-y-1/2
-
           items-center
-          justify-center
+          justify-end
 
           border-0
           bg-transparent
 
-          cursor-pointer
+          p-0
 
           outline-none
+
+          will-change-transform
         "
         style={{
-          width:
-            `${EDGE_CURVE_WIDTH}px`,
-
-          height: "150px",
-
-          opacity:
-            visible
-              ? 1
-              : 0,
-
-          pointerEvents:
-            visible &&
-            !isScrolling
-              ? "auto"
-              : "none",
-
-          transition:
-            reducedMotion
-              ? "opacity 180ms ease"
-              : "opacity 600ms cubic-bezier(.22,1,.36,1)",
-
-          transitionDelay:
-            visible
-              ? "150ms"
-              : "0ms",
+          width: `${EDGE_CURVE_WIDTH}px`,
         }}
       >
-        <span
-          aria-hidden="true"
+        {/* CURVE */}
+
+        <div
+          ref={curveWrapperRef}
           className="
             absolute
+            inset-0
 
-            flex
-            w-[34px]
-
-            flex-col
-
-            items-center
-
-            gap-[6px]
+            will-change-transform
           "
           style={{
-            right: "15px",
-
-            transform:
-              pressed
-                ? "scaleX(1.16) scaleY(.82)"
-                : hovered
-                ? "scaleX(1.08)"
-                : "scale(1)",
-
-            transition:
-              "transform 480ms cubic-bezier(.16,1,.3,1)",
+            transformOrigin:
+              "right center",
           }}
+        >
+          <EdgeCurve
+            tone="dark"
+            pressed={pressed}
+          />
+        </div>
+
+        {/* HAMBURGER */}
+
+        <span
+          ref={hamburgerRef}
+          aria-hidden="true"
+          className="
+            pointer-events-none
+
+            absolute
+
+            right-[18px]
+            top-1/2
+
+            z-20
+
+            flex
+
+            h-7
+            w-8
+
+            -translate-y-1/2
+
+            flex-col
+            items-center
+            justify-center
+
+            gap-[5px]
+
+            will-change-transform
+          "
         >
           <span
             className="
               block
-
-              h-[1.5px]
-              w-[27px]
-
-              rounded-full
-
+              h-px
+              w-[24px]
               bg-white
             "
           />
@@ -551,12 +902,8 @@ export function NavigationTrigger({
           <span
             className="
               block
-
-              h-[1.5px]
-              w-[20px]
-
-              rounded-full
-
+              h-px
+              w-[18px]
               bg-white
             "
           />
@@ -564,12 +911,8 @@ export function NavigationTrigger({
           <span
             className="
               block
-
-              h-[1.5px]
-              w-[27px]
-
-              rounded-full
-
+              h-px
+              w-[24px]
               bg-white
             "
           />

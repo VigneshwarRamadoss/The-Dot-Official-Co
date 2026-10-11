@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+
 import { WorkStack } from "./WorkStack";
-import { WorkProject } from "./WorkCard";
+import type { WorkProject } from "./WorkCard";
 
 export function SelectedWork() {
   const sampleProjects: WorkProject[] = [
@@ -13,59 +14,203 @@ export function SelectedWork() {
       tags: ["Brand", "Web Design"],
       image: "/images/work-interior.jpg",
       number: "01",
+      summary:
+        "A brand and digital experience designed to translate Orbit Studio's physical design philosophy into a more distinctive and internationally credible online presence.",
     },
+
     {
       slug: "swastik-corporation",
       client: "Swastik Corporation",
       title: "Swastik Corporation",
-      tags: ["ERP", "Product Design", "Web App"],
+      tags: [
+        "ERP",
+        "Product Design",
+        "Web App",
+      ],
       image: "/images/work-office.jpg",
       number: "02",
+      summary:
+        "A unified enterprise product experience created to simplify complex operations, improve visibility and reduce friction across everyday workflows.",
     },
+
     {
       slug: "skydic-outdoor",
       client: "Skydic Outdoor",
       title: "Skydic Outdoor Showcase",
-      tags: ["Design System", "Product"],
+      tags: [
+        "Design System",
+        "Product",
+      ],
       image: "/images/work-tower.jpg",
       number: "03",
+      summary:
+        "A scalable digital system that gives the brand a consistent product language across interfaces, platforms and future digital touchpoints.",
     },
   ];
 
   return (
-    <section id="work" className="py-12 md:py-20 px-4 md:px-8 max-w-[1440px] mx-auto">
-      {/* Dark section frame matching approved reference image */}
-      <div className="bg-[#080A0B] rounded-[32px] md:rounded-[40px] p-6 md:p-12 lg:p-16 border border-[#22252A] shadow-2xl relative overflow-hidden">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8 md:mb-12">
-          <div className="space-y-1">
-            <span className="font-sora text-[12px] font-medium tracking-widest text-[#9F9FA2] uppercase">
-              Selected Work
-            </span>
-            <h2 className="font-sora text-[28px] md:text-[36px] font-bold text-white tracking-tight">
+    <section
+      id="work"
+      className="
+        relative
+
+        w-full
+
+        bg-white
+
+        px-4
+        py-16
+
+        md:px-8
+        md:py-20
+      "
+    >
+      <div
+        className="
+          mx-auto
+
+          w-full
+          max-w-[1440px]
+        "
+      >
+        {/* ===============================================
+            HEADER
+
+            No dark outer frame anymore.
+           =============================================== */}
+
+        <div
+          className="
+            mb-4
+
+            flex
+            items-start
+            justify-between
+
+            gap-8
+
+            md:mb-6
+          "
+        >
+          <div>
+            <p
+              className="
+                font-sora
+
+                text-[10px]
+                font-semibold
+
+                uppercase
+
+                tracking-[0.22em]
+
+                text-black/38
+
+                md:text-[11px]
+              "
+            >
+              Selected work
+            </p>
+
+            <h2
+              className="
+                mt-3
+
+                font-sora
+
+                text-[36px]
+                font-bold
+
+                leading-[0.95]
+
+                tracking-[-0.055em]
+
+                text-[#181818]
+
+                sm:text-[44px]
+
+                md:text-[54px]
+              "
+            >
               Featured Case Studies
             </h2>
           </div>
 
           <Link
             href="/work"
-            className="font-sora text-[13px] md:text-[14px] font-medium text-[#9F9FA2] hover:text-white transition-colors flex items-center gap-1 group"
+            className="
+              group
+
+              mt-1
+
+              hidden
+
+              items-center
+              gap-2
+
+              font-sora
+
+              text-[13px]
+              font-medium
+
+              text-black/48
+
+              transition-colors
+
+              duration-300
+
+              hover:text-black
+
+              md:flex
+            "
           >
             All projects
-            <svg
-              className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+
+            <span
+              className="
+                transition-transform
+
+                duration-300
+
+                group-hover:translate-x-1
+              "
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-            </svg>
+              →
+            </span>
           </Link>
         </div>
 
-        {/* 3D Work Stack Fan */}
-        <WorkStack projects={sampleProjects} />
+        {/* ===============================================
+            CUBE + DETAILS
+           =============================================== */}
+
+        <WorkStack
+          projects={sampleProjects}
+        />
+
+        {/* MOBILE ALL PROJECTS */}
+
+        <div className="mt-6 md:hidden">
+          <Link
+            href="/work"
+            className="
+              inline-flex
+              items-center
+              gap-2
+
+              font-sora
+
+              text-[14px]
+              font-semibold
+
+              text-black/55
+            "
+          >
+            All projects
+
+            <span>→</span>
+          </Link>
+        </div>
       </div>
     </section>
   );

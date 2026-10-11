@@ -38,16 +38,17 @@ const navItems: NavItemData[] = [
     num: "02",
     label: "SERVICES",
   },
-  {
-    id: "contact",
-    num: "03",
-    label: "CONTACT",
-    href: "/book-a-call",
-  },
+  
   {
     id: "team",
-    num: "04",
+    num: "03",
     label: "TEAM",
+  },
+  {
+    id: "contact",
+    num: "04",
+    label: "CONTACT",
+    href: "/book-a-call",
   },
 ];
 

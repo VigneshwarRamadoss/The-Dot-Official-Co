@@ -1,5 +1,5 @@
 import { Navigation } from "@/components/Navigation";
-import { ContactCTA } from "@/components/ContactDialog";
+import { ContactCTA } from "@/components/ContactCTA";
 import { Footer } from "@/components/Footer";
 
 export default function ContactPage() {
@@ -27,3 +27,4 @@ export default function ContactPage() {
     </main>
   );
 }
+
