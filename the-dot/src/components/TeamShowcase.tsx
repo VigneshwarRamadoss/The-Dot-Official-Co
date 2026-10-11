@@ -1,132 +1,1225 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import Image from "next/image";
 
+import {
+  AnimatePresence,
+  motion,
+  type PanInfo,
+} from "motion/react";
+
+/* =========================================================
+   TEAM DATA
+   ========================================================= */
+
+const TEAM = [
+  {
+    name: "Rohan Varma",
+    role: "Founder & Product Lead",
+    image: "/images/team-01.jpg",
+  },
+  {
+    name: "Ananya Iyer",
+    role: "Design Director",
+    image: "/images/team-02.jpg",
+  },
+  {
+    name: "David Chen",
+    role: "Strategy Director",
+    image: "/images/team-03.jpg",
+  },
+  {
+    name: "Sarah Jenkins",
+    role: "Engineering Lead",
+    image: "/images/team-01.jpg",
+  },
+];
+
+const AUTO_PLAY_DELAY = 5000;
+
 export function TeamShowcase() {
-  const [activeMember, setActiveMember] = useState(0);
+  const rootRef =
+    useRef<HTMLDivElement>(null);
 
-  const team = [
-    {
-      name: "Rohan Varma",
-      role: "Founder & Product Lead",
-      image: "/images/team-01.jpg",
-    },
-    {
-      name: "Ananya Iyer",
-      role: "Design Director",
-      image: "/images/team-02.jpg",
-    },
-    {
-      name: "David Chen",
-      role: "Strategy Director",
-      image: "/images/team-03.jpg",
-    },
-    {
-      name: "Sarah Jenkins",
-      role: "Engineering Lead",
-      image: "/images/team-01.jpg",
-    },
-  ];
+  const [
+    activeMember,
+    setActiveMember,
+  ] = useState(0);
 
-  const current = team[activeMember];
+  const [
+    direction,
+    setDirection,
+  ] = useState(1);
+
+  const [
+    hoveredAvatar,
+    setHoveredAvatar,
+  ] = useState<number | null>(
+    null
+  );
+
+  const [
+    isVisible,
+    setIsVisible,
+  ] = useState(false);
+
+  const [
+    isTabVisible,
+    setIsTabVisible,
+  ] = useState(true);
+
+  const [
+    isInteracting,
+    setIsInteracting,
+  ] = useState(false);
+
+  const current =
+    TEAM[activeMember];
+
+  /* =======================================================
+     NAVIGATION
+     ======================================================= */
+
+  const selectMember =
+    useCallback(
+      (
+        index: number,
+        navigationDirection?: number
+      ) => {
+        const total =
+          TEAM.length;
+
+        const normalized =
+          (
+            index +
+            total
+          ) %
+          total;
+
+        if (
+          normalized ===
+          activeMember
+        ) {
+          return;
+        }
+
+        if (
+          navigationDirection !==
+          undefined
+        ) {
+          setDirection(
+            navigationDirection
+          );
+        } else {
+          setDirection(
+            normalized >
+              activeMember
+              ? 1
+              : -1
+          );
+        }
+
+        setActiveMember(
+          normalized
+        );
+      },
+      [activeMember]
+    );
+
+  const previous =
+    useCallback(() => {
+      selectMember(
+        activeMember - 1,
+        -1
+      );
+    }, [
+      activeMember,
+      selectMember,
+    ]);
+
+  const next =
+    useCallback(() => {
+      selectMember(
+        activeMember + 1,
+        1
+      );
+    }, [
+      activeMember,
+      selectMember,
+    ]);
+
+  /* =======================================================
+     SECTION VISIBILITY
+     ======================================================= */
+
+  useEffect(() => {
+    const root =
+      rootRef.current;
+
+    if (!root) {
+      return;
+    }
+
+    const observer =
+      new IntersectionObserver(
+        ([entry]) => {
+          setIsVisible(
+            entry.isIntersecting &&
+              entry.intersectionRatio >
+                0.45
+          );
+        },
+        {
+          threshold: [
+            0,
+            0.45,
+            0.7,
+          ],
+        }
+      );
+
+    observer.observe(
+      root
+    );
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  /* =======================================================
+     TAB VISIBILITY
+     ======================================================= */
+
+  useEffect(() => {
+    const handleVisibilityChange =
+      () => {
+        setIsTabVisible(
+          !document.hidden
+        );
+      };
+
+    handleVisibilityChange();
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
+    return () => {
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+    };
+  }, []);
+
+  /* =======================================================
+     AUTOPLAY
+     ======================================================= */
+
+  useEffect(() => {
+    if (
+      !isVisible ||
+      !isTabVisible ||
+      isInteracting
+    ) {
+      return;
+    }
+
+    const timer =
+      window.setTimeout(
+        () => {
+          setDirection(1);
+
+          setActiveMember(
+            (
+              previousIndex
+            ) =>
+              (
+                previousIndex +
+                  1
+              ) %
+              TEAM.length
+          );
+        },
+        AUTO_PLAY_DELAY
+      );
+
+    return () => {
+      window.clearTimeout(
+        timer
+      );
+    };
+  }, [
+    activeMember,
+    isVisible,
+    isTabVisible,
+    isInteracting,
+  ]);
+
+  /* =======================================================
+     DRAG / SWIPE
+     ======================================================= */
+
+  const handleDragEnd =
+    (
+      _event:
+        MouseEvent |
+        TouchEvent |
+        PointerEvent,
+
+      info:
+        PanInfo
+    ) => {
+      setIsInteracting(
+        false
+      );
+
+      if (
+        info.offset.x <
+          -70 ||
+        info.velocity.x <
+          -500
+      ) {
+        next();
+
+        return;
+      }
+
+      if (
+        info.offset.x >
+          70 ||
+        info.velocity.x >
+          500
+      ) {
+        previous();
+      }
+    };
+
+  /* =======================================================
+     AVATAR DOCK MAGNIFICATION
+     ======================================================= */
+
+  const getAvatarScale =
+    (
+      index: number
+    ) => {
+      if (
+        hoveredAvatar ===
+        null
+      ) {
+        return index ===
+          activeMember
+          ? 1.15
+          : 1;
+      }
+
+      const distance =
+        Math.abs(
+          index -
+            hoveredAvatar
+        );
+
+      if (distance === 0) {
+        return 1.32;
+      }
+
+      if (distance === 1) {
+        return 1.13;
+      }
+
+      return 0.96;
+    };
+
+  const getAvatarY =
+    (
+      index: number
+    ) => {
+      if (
+        hoveredAvatar ===
+        null
+      ) {
+        return index ===
+          activeMember
+          ? -4
+          : 0;
+      }
+
+      const distance =
+        Math.abs(
+          index -
+            hoveredAvatar
+        );
+
+      if (distance === 0) {
+        return -11;
+      }
+
+      if (distance === 1) {
+        return -4;
+      }
+
+      return 0;
+    };
 
   return (
-    <div className="relative w-full bg-[#F4F5F5] rounded-[32px] md:rounded-[40px] p-6 md:p-12 lg:p-14 border border-[#E5E6E9] shadow-xs">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-        
-        {/* Left Vertical Avatar Selector Rail + Featured Portrait Image */}
-        <div className="lg:col-span-6 flex items-center gap-6">
-          {/* Vertical Avatar Selector Dock */}
-          <div className="flex flex-col gap-4">
-            {team.map((member, idx) => (
-              <button
-                key={idx}
-                onClick={() => setActiveMember(idx)}
-                className={`relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden transition-all duration-300 border-2 ${
-                  idx === activeMember
-                    ? "border-[#040404] scale-110 shadow-md ring-2 ring-black/10"
-                    : "border-transparent opacity-60 hover:opacity-100 hover:scale-105"
-                }`}
-                aria-label={`Select ${member.name}`}
+    <div
+      ref={rootRef}
+      className="
+        mx-auto
+
+        grid
+
+        h-full
+        w-full
+
+        max-w-[1440px]
+
+        grid-rows-[auto_minmax(0,1fr)_auto]
+      "
+      onMouseEnter={() =>
+        setIsInteracting(
+          true
+        )
+      }
+      onMouseLeave={() => {
+        setIsInteracting(
+          false
+        );
+
+        setHoveredAvatar(
+          null
+        );
+      }}
+    >
+      {/* =================================================
+          HEADER
+         ================================================= */}
+
+      <div
+        className="
+          relative
+
+          z-20
+
+          pt-10
+          pb-8
+
+          md:pt-12
+          md:pb-10
+
+          lg:pt-14
+          lg:pb-8
+        "
+      >
+        <p
+          className="
+            font-sora
+
+            text-[9px]
+            font-semibold
+
+            uppercase
+
+            tracking-[0.32em]
+
+            text-black/40
+
+            md:text-[10px]
+          "
+        >
+          Team
+        </p>
+
+        <h2
+          className="
+            mt-2
+
+            max-w-[560px]
+
+            font-sora
+
+            text-[42px]
+            font-bold
+
+            leading-[0.95]
+
+            tracking-[-0.06em]
+
+            text-[#171717]
+
+            sm:text-[48px]
+
+            md:text-[54px]
+
+            xl:text-[58px]
+          "
+        >
+          People behind
+          <br />
+          The Dot.
+        </h2>
+      </div>
+
+      {/* =================================================
+          MAIN PROFILE STAGE
+         ================================================= */}
+
+      <motion.div
+        drag="x"
+
+        dragConstraints={{
+          left: 0,
+          right: 0,
+        }}
+
+        dragElastic={
+          0.1
+        }
+
+        onDragStart={() =>
+          setIsInteracting(
+            true
+          )
+        }
+
+        onDragEnd={
+          handleDragEnd
+        }
+
+        className="
+          relative
+
+          grid
+
+          min-h-0
+
+          cursor-grab
+
+          grid-cols-1
+
+          items-center
+
+          gap-10
+
+          active:cursor-grabbing
+
+          lg:grid-cols-12
+          lg:gap-14
+        "
+      >
+        {/* =================================================
+            LEFT — PORTRAIT
+
+            Smaller portrait.
+            Shifted toward center/right.
+           ================================================= */}
+
+        <div
+          className="
+            relative
+
+            flex
+
+            min-h-0
+
+            items-center
+            justify-center
+
+            lg:col-span-6
+            lg:justify-end
+            lg:pr-6
+
+            xl:pr-10
+
+            2xl:pr-14
+          "
+        >
+          <div
+            className="
+              relative
+
+              aspect-[4/5]
+
+              w-full
+              max-w-[330px]
+
+              overflow-hidden
+
+              rounded-[26px]
+
+              bg-[#ECECE8]
+
+              sm:max-w-[340px]
+
+              lg:max-w-[350px]
+
+              xl:max-w-[360px]
+            "
+          >
+            <AnimatePresence
+              initial={false}
+              custom={
+                direction
+              }
+              mode="popLayout"
+            >
+              <motion.div
+                key={
+                  current.name
+                }
+
+                custom={
+                  direction
+                }
+
+                initial={{
+                  opacity: 0,
+
+                  x:
+                    direction >
+                    0
+                      ? 55
+                      : -55,
+
+                  scale:
+                    0.97,
+                }}
+
+                animate={{
+                  opacity: 1,
+
+                  x: 0,
+
+                  scale: 1,
+                }}
+
+                exit={{
+                  opacity: 0,
+
+                  x:
+                    direction >
+                    0
+                      ? -55
+                      : 55,
+
+                  scale:
+                    0.97,
+                }}
+
+                transition={{
+                  duration:
+                    0.58,
+
+                  ease: [
+                    0.16,
+                    1,
+                    0.3,
+                    1,
+                  ],
+                }}
+
+                className="
+                  absolute
+                  inset-0
+                "
               >
                 <Image
-                  src={member.image}
-                  alt={member.name}
+                  src={
+                    current.image
+                  }
+
+                  alt={
+                    current.name
+                  }
+
                   fill
-                  className="object-cover"
-                  sizes="56px"
+
+                  priority
+
+                  className="
+                    object-cover
+                  "
+
+                  sizes="
+                    (max-width: 1024px) 90vw,
+                    360px
+                  "
                 />
-              </button>
-            ))}
-          </div>
+              </motion.div>
+            </AnimatePresence>
 
-          {/* Main Featured Portrait Frame */}
-          <div className="relative w-full aspect-[4/5] max-w-[380px] rounded-[24px] overflow-hidden bg-[#D9D9D9] shadow-md border border-black/5" data-cursor="hover">
-            <Image
-              src={current.image}
-              alt={current.name}
-              fill
-              className="object-cover transition-all duration-500"
-              sizes="380px"
-              priority
-            />
-            {/* Subtle name badge overlay */}
-            <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md text-white p-3 rounded-xl">
-              <p className="font-sora text-sm font-bold">{current.name}</p>
-              <p className="font-sora text-xs text-[#9F9FA2]">{current.role}</p>
+            {/* NUMBER */}
+
+            <div
+              className="
+                absolute
+
+                left-4
+                top-4
+
+                z-20
+
+                rounded-full
+
+                bg-white/82
+
+                px-3
+                py-1.5
+
+                font-sora
+
+                text-[8px]
+                font-semibold
+
+                tracking-[0.14em]
+
+                text-black/50
+
+                backdrop-blur-md
+              "
+            >
+              {String(
+                activeMember +
+                  1
+              ).padStart(
+                2,
+                "0"
+              )}
+
+              <span
+                className="
+                  mx-1.5
+
+                  text-black/20
+                "
+              >
+                /
+              </span>
+
+              {String(
+                TEAM.length
+              ).padStart(
+                2,
+                "0"
+              )}
             </div>
           </div>
         </div>
 
-        {/* Right Column: Credibility Headline + Stats Column */}
-        <div className="lg:col-span-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-          
-          {/* Headline & Subtitle (approx 8 cols) */}
-          <div className="md:col-span-8 space-y-4">
-            <h2 className="font-sora text-[32px] sm:text-[40px] lg:text-[48px] font-bold text-[#040404] leading-[1.08] tracking-tight">
-              Designers, <br />
-              builders and <br />
-              problem solvers.
-            </h2>
+        {/* =================================================
+            RIGHT — MEMBER DETAILS
+           ================================================= */}
 
-            <p className="font-sora text-[15px] md:text-[16px] text-[#818084] leading-relaxed max-w-[320px]">
-              A small team with a big focus on meaningful work.
-            </p>
-          </div>
+        <div
+          className="
+            flex
 
-          {/* Stats Column (approx 4 cols) matching reference image */}
-          <div className="md:col-span-4 border-l border-[#DADBDC] pl-6 py-2 space-y-6">
-            <div>
-              <span className="font-sora text-[32px] md:text-[38px] font-bold text-[#040404] block leading-none">
-                5+
-              </span>
-              <span className="font-sora text-[13px] text-[#818084] font-medium">
-                Years
-              </span>
-            </div>
+            items-center
 
-            <div>
-              <span className="font-sora text-[32px] md:text-[38px] font-bold text-[#040404] block leading-none">
-                50+
-              </span>
-              <span className="font-sora text-[13px] text-[#818084] font-medium">
-                Projects
-              </span>
-            </div>
+            lg:col-span-6
+            lg:pl-6
 
-            <div>
-              <span className="font-sora text-[32px] md:text-[38px] font-bold text-[#040404] block leading-none">
-                10+
-              </span>
-              <span className="font-sora text-[13px] text-[#818084] font-medium">
-                Industries
-              </span>
-            </div>
-          </div>
+            xl:pl-8
+          "
+        >
+          <AnimatePresence
+            initial={false}
+            mode="wait"
+          >
+            <motion.div
+              key={
+                current.name
+              }
 
+              initial={{
+                opacity: 0,
+                y: 16,
+              }}
+
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+
+              exit={{
+                opacity: 0,
+                y: -10,
+              }}
+
+              transition={{
+                duration:
+                  0.42,
+
+                ease: [
+                  0.16,
+                  1,
+                  0.3,
+                  1,
+                ],
+              }}
+
+              className="
+                w-full
+
+                max-w-[470px]
+              "
+            >
+              {/* LABEL */}
+
+              <div
+                className="
+                  mb-6
+
+                  flex
+
+                  items-center
+
+                  gap-4
+                "
+              >
+                <span
+                  className="
+                    font-sora
+
+                    text-[9px]
+                    font-semibold
+
+                    uppercase
+
+                    tracking-[0.18em]
+
+                    text-black/35
+                  "
+                >
+                  Selected member
+                </span>
+
+                <span
+                  className="
+                    h-px
+                    w-12
+
+                    bg-black/10
+                  "
+                />
+              </div>
+
+              {/* NAME */}
+
+              <h3
+                className="
+                  font-sora
+
+                  text-[40px]
+                  font-bold
+
+                  leading-[0.92]
+
+                  tracking-[-0.06em]
+
+                  text-[#171717]
+
+                  sm:text-[46px]
+
+                  lg:text-[52px]
+
+                  xl:text-[58px]
+                "
+              >
+                {
+                  current.name
+                }
+              </h3>
+
+              {/* ROLE */}
+
+              <p
+                className="
+                  mt-5
+
+                  font-sora
+
+                  text-[14px]
+                  font-medium
+
+                  text-black/50
+
+                  md:text-[15px]
+                "
+              >
+                {
+                  current.role
+                }
+              </p>
+
+              {/* DESCRIPTION */}
+
+              <p
+                className="
+                  mt-8
+
+                  max-w-[400px]
+
+                  font-sora
+
+                  text-[13px]
+
+                  leading-[1.7]
+
+                  text-black/42
+
+                  md:text-[14px]
+                "
+              >
+                A small team of designers,
+                builders and problem solvers
+                focused on understanding the
+                problem before designing the
+                answer.
+              </p>
+
+              {/* ARROWS */}
+
+              <div
+                className="
+                  mt-9
+
+                  flex
+
+                  items-center
+
+                  gap-3
+                "
+              >
+                <button
+                  type="button"
+
+                  aria-label="Previous team member"
+
+                  onClick={() => {
+                    setIsInteracting(
+                      true
+                    );
+
+                    previous();
+
+                    window.setTimeout(
+                      () =>
+                        setIsInteracting(
+                          false
+                        ),
+                      600
+                    );
+                  }}
+
+                  className="
+                    grid
+
+                    h-11
+                    w-11
+
+                    place-items-center
+
+                    rounded-full
+
+                    border
+                    border-black/10
+
+                    text-[#181818]
+
+                    transition-all
+
+                    duration-300
+
+                    hover:bg-[#181818]
+                    hover:text-white
+                  "
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="
+                      h-4
+                      w-4
+                    "
+                  >
+                    <path
+                      d="M15 5L8 12L15 19"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+
+                  aria-label="Next team member"
+
+                  onClick={() => {
+                    setIsInteracting(
+                      true
+                    );
+
+                    next();
+
+                    window.setTimeout(
+                      () =>
+                        setIsInteracting(
+                          false
+                        ),
+                      600
+                    );
+                  }}
+
+                  className="
+                    grid
+
+                    h-11
+                    w-11
+
+                    place-items-center
+
+                    rounded-full
+
+                    border
+                    border-black/10
+
+                    text-[#181818]
+
+                    transition-all
+
+                    duration-300
+
+                    hover:bg-[#181818]
+                    hover:text-white
+                  "
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="
+                      h-4
+                      w-4
+                    "
+                  >
+                    <path
+                      d="M9 5L16 12L9 19"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
+      </motion.div>
 
+      {/* =================================================
+          AVATAR DOCK
+
+          More deliberate breathing space
+          between portrait and dock.
+         ================================================= */}
+
+      <div
+        className="
+          relative
+
+          z-30
+
+          flex
+
+          justify-center
+
+          pt-10
+          pb-8
+
+          md:pt-12
+          md:pb-9
+        "
+      >
+        <div
+          className="
+            flex
+
+            h-[76px]
+
+            items-end
+
+            gap-3
+
+            rounded-[24px]
+
+            border
+            border-black/[0.06]
+
+            bg-white/85
+
+            px-5
+            pb-3
+
+            shadow-[0_18px_55px_rgba(0,0,0,0.065)]
+
+            backdrop-blur-xl
+          "
+          onMouseLeave={() =>
+            setHoveredAvatar(
+              null
+            )
+          }
+        >
+          {TEAM.map(
+            (
+              member,
+              index
+            ) => {
+              const active =
+                index ===
+                activeMember;
+
+              return (
+                <motion.button
+                  key={
+                    member.name
+                  }
+
+                  type="button"
+
+                  aria-label={`Select ${member.name}`}
+
+                  onMouseEnter={() => {
+                    setHoveredAvatar(
+                      index
+                    );
+
+                    setIsInteracting(
+                      true
+                    );
+                  }}
+
+                  onMouseLeave={() => {
+                    setIsInteracting(
+                      false
+                    );
+                  }}
+
+                  onClick={() => {
+                    setIsInteracting(
+                      true
+                    );
+
+                    selectMember(
+                      index
+                    );
+
+                    window.setTimeout(
+                      () =>
+                        setIsInteracting(
+                          false
+                        ),
+                      600
+                    );
+                  }}
+
+                  animate={{
+                    scale:
+                      getAvatarScale(
+                        index
+                      ),
+
+                    y:
+                      getAvatarY(
+                        index
+                      ),
+                  }}
+
+                  transition={{
+                    type:
+                      "spring",
+
+                    stiffness:
+                      260,
+
+                    damping:
+                      20,
+
+                    mass:
+                      0.7,
+                  }}
+
+                  className={`
+                    relative
+
+                    h-11
+                    w-11
+
+                    shrink-0
+
+                    overflow-hidden
+
+                    rounded-full
+
+                    border
+
+                    transition-[opacity,border-color]
+
+                    duration-300
+
+                    md:h-12
+                    md:w-12
+
+                    ${
+                      active
+                        ? `
+                          border-black
+                          opacity-100
+                        `
+                        : `
+                          border-white
+                          opacity-55
+
+                          hover:opacity-100
+                        `
+                    }
+                  `}
+                >
+                  <Image
+                    src={
+                      member.image
+                    }
+
+                    alt={
+                      member.name
+                    }
+
+                    fill
+
+                    className="
+                      object-cover
+                    "
+
+                    sizes="56px"
+                  />
+                </motion.button>
+              );
+            }
+          )}
+        </div>
       </div>
     </div>
   );

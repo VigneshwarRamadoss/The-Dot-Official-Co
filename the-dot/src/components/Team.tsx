@@ -4,7 +4,24 @@ import { TeamShowcase } from "./TeamShowcase";
 
 export function Team() {
   return (
-    <section id="team" className="py-12 md:py-20 px-4 md:px-8 max-w-[1440px] mx-auto">
+    <section
+      id="team"
+      className="
+        relative
+
+        h-[100svh]
+        min-h-[680px]
+
+        w-full
+
+        overflow-hidden
+
+        bg-white
+
+        px-4
+        md:px-8
+      "
+    >
       <TeamShowcase />
     </section>
   );
