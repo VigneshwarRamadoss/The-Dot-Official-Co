@@ -19,6 +19,12 @@ import {
   type ServiceArtworkType,
 } from "./ServiceCard";
 
+type ServiceDotAnimation =
+  | "playful"
+  | "excited"
+  | "thinking"
+  | "proud";
+
 interface Service {
   title: string;
   shortTitle: string;
@@ -26,6 +32,8 @@ interface Service {
   items: string[];
   artworkType: ServiceArtworkType;
   isDark?: boolean;
+  dotThought: string;
+  dotAnimation: ServiceDotAnimation;
 }
 
 const SERVICES: Service[] = [
@@ -41,8 +49,10 @@ const SERVICES: Service[] = [
     ],
     artworkType: "brand",
     isDark: true,
+    dotThought:
+      "Give it a personality people remember.",
+    dotAnimation: "playful",
   },
-
   {
     title: "Digital Experience",
     shortTitle: "Digital",
@@ -54,8 +64,10 @@ const SERVICES: Service[] = [
       "Interactive",
     ],
     artworkType: "experience",
+    dotThought:
+      "Smooth clicks. Happy humans.",
+    dotAnimation: "excited",
   },
-
   {
     title: "Product Design",
     shortTitle: "Product",
@@ -67,8 +79,10 @@ const SERVICES: Service[] = [
       "Design Systems",
     ],
     artworkType: "product",
+    dotThought:
+      "Complex stuff, made weirdly simple.",
+    dotAnimation: "thinking",
   },
-
   {
     title: "Growth Systems",
     shortTitle: "Growth",
@@ -80,16 +94,16 @@ const SERVICES: Service[] = [
       "Optimization",
     ],
     artworkType: "growth",
+    dotThought:
+      "Small wins stacking up. I like this.",
+    dotAnimation: "proud",
   },
 ];
 
-/* =========================================================
-   AUTOPLAY
+const AUTO_PLAY_DELAY = 5000;
 
-   2000ms = 2 seconds
-   ========================================================= */
-
-const AUTO_PLAY_DELAY = 2000;
+const EXPLORE_THOUGHT =
+  "Curious about everything we can build?";
 
 export function Services() {
   const sectionRef =
@@ -100,56 +114,42 @@ export function Services() {
     setActiveIndex,
   ] = useState(1);
 
-  /*
-   * Is the Services section currently
-   * visible in the viewport?
-   */
   const [
     isVisible,
     setIsVisible,
   ] = useState(false);
 
-  /*
-   * Is the browser tab currently active?
-   *
-   * false:
-   * user switched tab / minimized browser
-   *
-   * true:
-   * user is viewing this browser tab
-   */
   const [
     isTabVisible,
     setIsTabVisible,
   ] = useState(true);
 
+  const [
+    isExploreHovered,
+    setIsExploreHovered,
+  ] = useState(false);
+
   /* =======================================================
-     CAROUSEL NAVIGATION
+     CAROUSEL
      ======================================================= */
 
-  const goTo =
-    useCallback(
-      (index: number) => {
-        const total =
-          SERVICES.length;
+  const goTo = useCallback(
+    (index: number) => {
+      const total =
+        SERVICES.length;
 
-        setActiveIndex(
-          (
-            index +
-            total
-          ) %
-            total
-        );
-      },
-      []
-    );
+      setActiveIndex(
+        (index + total) %
+          total
+      );
+    },
+    []
+  );
 
   const previous =
     useCallback(() => {
       setActiveIndex(
-        (
-          previousIndex
-        ) =>
+        (previousIndex) =>
           (
             previousIndex -
             1 +
@@ -162,9 +162,7 @@ export function Services() {
   const next =
     useCallback(() => {
       setActiveIndex(
-        (
-          previousIndex
-        ) =>
+        (previousIndex) =>
           (
             previousIndex +
             1
@@ -175,9 +173,6 @@ export function Services() {
 
   /* =======================================================
      SECTION VISIBILITY
-
-     Autoplay only runs when a meaningful amount
-     of the Services section is visible.
      ======================================================= */
 
   useEffect(() => {
@@ -206,9 +201,7 @@ export function Services() {
         }
       );
 
-    observer.observe(
-      section
-    );
+    observer.observe(section);
 
     return () => {
       observer.disconnect();
@@ -217,15 +210,6 @@ export function Services() {
 
   /* =======================================================
      TAB VISIBILITY
-
-     Active tab:
-       autoplay can run
-
-     User switches tab:
-       autoplay pauses immediately
-
-     User returns:
-       fresh 2-second countdown starts
      ======================================================= */
 
   useEffect(() => {
@@ -236,9 +220,6 @@ export function Services() {
         );
       };
 
-    /*
-     * Establish correct state immediately.
-     */
     handleVisibilityChange();
 
     document.addEventListener(
@@ -255,24 +236,14 @@ export function Services() {
   }, []);
 
   /* =======================================================
-     AUTOPLAY
-
-     Conditions:
-
-     - Services section visible
-     - browser tab visible
-
-     Any change to activeIndex restarts
-     the two-second countdown.
-
-     This also means manual controls naturally
-     reset the autoplay timer.
+     AUTOPLAY — 5 SECONDS
      ======================================================= */
 
   useEffect(() => {
     if (
       !isVisible ||
-      !isTabVisible
+      !isTabVisible ||
+      isExploreHovered
     ) {
       return;
     }
@@ -281,9 +252,7 @@ export function Services() {
       window.setTimeout(
         () => {
           setActiveIndex(
-            (
-              previousIndex
-            ) =>
+            (previousIndex) =>
               (
                 previousIndex +
                 1
@@ -303,94 +272,178 @@ export function Services() {
     activeIndex,
     isVisible,
     isTabVisible,
+    isExploreHovered,
   ]);
+
+  /* =======================================================
+     ACTIVE SERVICE → DOT
+     ======================================================= */
+
+  useEffect(() => {
+    if (!isVisible) {
+      return;
+    }
+
+    const service =
+      SERVICES[activeIndex];
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "dot:services-change",
+        {
+          detail: {
+            index:
+              activeIndex,
+            title:
+              service.title,
+            animation:
+              service.dotAnimation,
+            thought:
+              service.dotThought,
+          },
+        }
+      )
+    );
+  }, [
+    activeIndex,
+    isVisible,
+  ]);
+
+  /* =======================================================
+     EXPLORE INTERACTION
+     ======================================================= */
+
+  const handleExploreEnter =
+    useCallback(() => {
+      setIsExploreHovered(
+        true
+      );
+
+      window.dispatchEvent(
+        new CustomEvent(
+          "dot:services-explore",
+          {
+            detail: {
+              active: true,
+              thought:
+                EXPLORE_THOUGHT,
+            },
+          }
+        )
+      );
+    }, []);
+
+  const handleExploreLeave =
+    useCallback(() => {
+      setIsExploreHovered(
+        false
+      );
+
+      window.dispatchEvent(
+        new CustomEvent(
+          "dot:services-explore",
+          {
+            detail: {
+              active: false,
+            },
+          }
+        )
+      );
+    }, []);
+
+  /* =======================================================
+     CAROUSEL HOVER
+
+     If DOT previously returned into navigation,
+     intentionally entering the carousel brings
+     it back out.
+     ======================================================= */
+
+  const handleCarouselEnter =
+    useCallback(() => {
+      const service =
+        SERVICES[activeIndex];
+
+      window.dispatchEvent(
+        new CustomEvent(
+          "dot:services-carousel",
+          {
+            detail: {
+              animation:
+                service.dotAnimation,
+              thought:
+                service.dotThought,
+            },
+          }
+        )
+      );
+    }, [activeIndex]);
 
   /* =======================================================
      DRAG / SWIPE
      ======================================================= */
 
-  const handleDragEnd =
-    (
-      _event:
-        MouseEvent |
-        TouchEvent |
-        PointerEvent,
+  const handleDragEnd = (
+    _event:
+      | MouseEvent
+      | TouchEvent
+      | PointerEvent,
+    info: PanInfo
+  ) => {
+    const distance =
+      info.offset.x;
 
-      info:
-        PanInfo
-    ) => {
-      const distance =
-        info.offset.x;
+    const velocity =
+      info.velocity.x;
 
-      const velocity =
-        info.velocity.x;
+    if (
+      distance < -70 ||
+      velocity < -500
+    ) {
+      next();
+      return;
+    }
 
-      /*
-       * Swipe left:
-       * next service
-       */
-      if (
-        distance < -70 ||
-        velocity < -500
-      ) {
-        next();
-
-        return;
-      }
-
-      /*
-       * Swipe right:
-       * previous service
-       */
-      if (
-        distance > 70 ||
-        velocity > 500
-      ) {
-        previous();
-      }
-    };
+    if (
+      distance > 70 ||
+      velocity > 500
+    ) {
+      previous();
+    }
+  };
 
   /* =======================================================
      RELATIVE POSITION
-
-     Converts carousel index into:
-
-     -1 = previous
-      0 = active
-      1 = next
-
-     Remaining card sits outside the main view.
      ======================================================= */
 
-  const getRelativeIndex =
-    (
-      index: number
-    ) => {
-      const total =
-        SERVICES.length;
+  const getRelativeIndex = (
+    index: number
+  ) => {
+    const total =
+      SERVICES.length;
 
-      let difference =
-        index -
-        activeIndex;
+    let difference =
+      index -
+      activeIndex;
 
-      if (
-        difference >
-        total / 2
-      ) {
-        difference -=
-          total;
-      }
+    if (
+      difference >
+      total / 2
+    ) {
+      difference -=
+        total;
+    }
 
-      if (
-        difference <
-        -total / 2
-      ) {
-        difference +=
-          total;
-      }
+    if (
+      difference <
+      -total / 2
+    ) {
+      difference +=
+        total;
+    }
 
-      return difference;
-    };
+    return difference;
+  };
 
   return (
     <section
@@ -398,123 +451,169 @@ export function Services() {
       id="services"
       className="
         relative
-
         h-[100svh]
         min-h-[680px]
-
         w-full
-
         overflow-hidden
-
         bg-[#F8F7F4]
-
         px-4
-
         md:px-8
       "
     >
       <div
         className="
           mx-auto
-
           grid
-
           h-full
           w-full
-
           max-w-[1440px]
-
-          grid-rows-[auto_minmax(0,1fr)_auto]
+          grid-rows-[auto_minmax(0,1fr)]
         "
       >
         {/* =================================================
-            HEADER — LEFT ALIGNED
+            HEADER
            ================================================= */}
 
         <div
           className="
             relative
-
             z-20
-
-            max-w-[650px]
-
             pt-10
-
-            text-left
-
             md:pt-12
-
             lg:pt-14
           "
         >
-          <p
+          <div
             className="
-              font-sora
-
-              text-[9px]
-              font-semibold
-
-              uppercase
-
-              tracking-[0.34em]
-
-              text-black/45
-
-              md:text-[10px]
+              max-w-[650px]
+              text-left
             "
           >
-            Our
-          </p>
+            <p
+              className="
+                font-sora
+                text-[9px]
+                font-semibold
+                uppercase
+                tracking-[0.34em]
+                text-black/45
+                md:text-[10px]
+              "
+            >
+              Our
+            </p>
 
-          <h2
+            <h2
+              className="
+                mt-1.5
+                font-sora
+                text-[44px]
+                font-bold
+                leading-none
+                tracking-[-0.06em]
+                text-[#171717]
+                sm:text-[50px]
+                md:text-[58px]
+                xl:text-[64px]
+              "
+            >
+              Services
+            </h2>
+
+            <p
+              className="
+                mt-3
+                max-w-[560px]
+                font-sora
+                text-[12px]
+                leading-[1.55]
+                text-black/42
+                sm:text-[13px]
+                md:text-[14px]
+              "
+            >
+              End-to-end digital
+              solutions built to
+              strengthen your brand,
+              product and growth.
+            </p>
+          </div>
+
+          {/* =================================================
+              EXPLORE ALL SERVICES
+             ================================================= */}
+
+          <div
             className="
-              mt-1.5
-
-              font-sora
-
-              text-[44px]
-              font-bold
-
-              leading-none
-
-              tracking-[-0.06em]
-
-              text-[#171717]
-
-              sm:text-[50px]
-
-              md:text-[58px]
-
-              xl:text-[64px]
+              absolute
+              right-[-24px]
+              top-7
+              z-30
+              hidden
+              p-6
+              sm:block
+              md:top-9
             "
+            onPointerEnter={
+              handleExploreEnter
+            }
+            onPointerLeave={
+              handleExploreLeave
+            }
           >
-            Services
-          </h2>
+            <Link
+              href="/services"
+              onFocus={
+                handleExploreEnter
+              }
+              onBlur={
+                handleExploreLeave
+              }
+              className="
+                group
+                relative
+                inline-flex
+                items-center
+                gap-2
+                whitespace-nowrap
+                font-sora
+                text-[10px]
+                font-semibold
+                uppercase
+                tracking-[0.14em]
+                text-black/38
+                transition-colors
+                duration-300
+                hover:text-black
+              "
+            >
+              Explore all services
 
-          <p
-            className="
-              mt-3
+              <span
+                className="
+                  transition-transform
+                  duration-300
+                  group-hover:translate-x-1
+                "
+              >
+                →
+              </span>
 
-              max-w-[560px]
-
-              font-sora
-
-              text-[12px]
-
-              leading-[1.55]
-
-              text-black/42
-
-              sm:text-[13px]
-
-              md:text-[14px]
-            "
-          >
-            End-to-end digital solutions built
-            to strengthen your brand, product
-            and growth.
-          </p>
+              <span
+                data-dot-services-explore-anchor
+                aria-hidden="true"
+                className="
+                  pointer-events-none
+                  absolute
+                  -left-[44px]
+                  top-1/2
+                  h-px
+                  w-px
+                  -translate-y-1/2
+                "
+              />
+            </Link>
+          </div>
         </div>
 
         {/* =================================================
@@ -523,44 +622,46 @@ export function Services() {
 
         <motion.div
           drag="x"
-
           dragConstraints={{
             left: 0,
             right: 0,
           }}
-
           dragElastic={
             0.12
           }
-
           onDragEnd={
             handleDragEnd
           }
-
+          onPointerEnter={
+            handleCarouselEnter
+          }
           className="
             relative
-
+            mx-auto
             min-h-0
-
             w-full
-
+            max-w-[1380px]
             cursor-grab
-
             touch-pan-y
-
             select-none
-
             active:cursor-grabbing
           "
         >
           {/* =================================================
-              CARDS
+              SMALLER CAROUSEL
              ================================================= */}
 
           <div
             className="
               absolute
               inset-0
+              origin-center
+              -translate-y-[18px]
+              scale-[0.82]
+              sm:scale-[0.84]
+              md:scale-[0.86]
+              lg:scale-[0.88]
+              xl:scale-[0.9]
             "
           >
             {SERVICES.map(
@@ -578,47 +679,35 @@ export function Services() {
                     key={
                       service.title
                     }
-
                     index={
                       index
                     }
-
                     title={
                       service.title
                     }
-
                     shortTitle={
                       service.shortTitle
                     }
-
                     description={
                       service.description
                     }
-
                     items={
                       service.items
                     }
-
                     artworkType={
                       service.artworkType
                     }
-
                     isDark={
                       service.isDark
                     }
-
                     relativeIndex={
                       relative
                     }
-
                     isActive={
                       relative === 0
                     }
-
                     onClick={() =>
-                      goTo(
-                        index
-                      )
+                      goTo(index)
                     }
                   />
                 );
@@ -627,296 +716,26 @@ export function Services() {
           </div>
 
           {/* =================================================
-              PREVIOUS
+              DOT HOME
+
+              Raised from the previous position.
              ================================================= */}
 
-          <button
-            type="button"
-
-            aria-label="Previous service"
-
-            onClick={(
-              event
-            ) => {
-              event.stopPropagation();
-
-              previous();
-            }}
-
+          <span
+            data-dot-services-home
+            aria-hidden="true"
             className="
+              pointer-events-none
               absolute
-
-              left-[2%]
-              top-1/2
-
-              z-50
-
-              grid
-
-              h-11
-              w-11
-
-              -translate-y-1/2
-
-              place-items-center
-
-              rounded-full
-
-              border
-              border-black/10
-
-              bg-white/90
-
-              text-[#181818]
-
-              shadow-[0_8px_28px_rgba(0,0,0,0.06)]
-
-              backdrop-blur-xl
-
-              transition-all
-
-              duration-300
-
-              hover:scale-105
-              hover:bg-[#181818]
-              hover:text-white
-
-              md:left-[4%]
-
-              md:h-12
-              md:w-12
+              bottom-[54px]
+              left-1/2
+              h-px
+              w-px
+              -translate-x-1/2
+              md:bottom-[58px]
             "
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="
-                h-5
-                w-5
-              "
-            >
-              <path
-                d="M15 5L8 12L15 19"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-
-          {/* =================================================
-              NEXT
-             ================================================= */}
-
-          <button
-            type="button"
-
-            aria-label="Next service"
-
-            onClick={(
-              event
-            ) => {
-              event.stopPropagation();
-
-              next();
-            }}
-
-            className="
-              absolute
-
-              right-[2%]
-              top-1/2
-
-              z-50
-
-              grid
-
-              h-11
-              w-11
-
-              -translate-y-1/2
-
-              place-items-center
-
-              rounded-full
-
-              border
-              border-black/10
-
-              bg-white/90
-
-              text-[#181818]
-
-              shadow-[0_8px_28px_rgba(0,0,0,0.06)]
-
-              backdrop-blur-xl
-
-              transition-all
-
-              duration-300
-
-              hover:scale-105
-              hover:bg-[#181818]
-              hover:text-white
-
-              md:right-[4%]
-
-              md:h-12
-              md:w-12
-            "
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="
-                h-5
-                w-5
-              "
-            >
-              <path
-                d="M9 5L16 12L9 19"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
+          />
         </motion.div>
-
-        {/* =================================================
-            BOTTOM CONTROLS
-           ================================================= */}
-
-        <div
-          className="
-            relative
-
-            z-20
-
-            flex
-
-            flex-col
-
-            items-center
-
-            pb-6
-
-            md:pb-7
-          "
-        >
-          {/* DOTS */}
-
-          <div
-            className="
-              flex
-
-              items-center
-              justify-center
-
-              gap-3
-            "
-          >
-            {SERVICES.map(
-              (
-                service,
-                index
-              ) => (
-                <button
-                  key={
-                    service.title
-                  }
-
-                  type="button"
-
-                  aria-label={`Show ${service.title}`}
-
-                  onClick={() =>
-                    goTo(
-                      index
-                    )
-                  }
-
-                  className={`
-                    rounded-full
-
-                    transition-all
-
-                    duration-500
-
-                    ${
-                      index ===
-                      activeIndex
-                        ? `
-                          h-[7px]
-                          w-[7px]
-
-                          bg-[#181818]
-                        `
-                        : `
-                          h-[6px]
-                          w-[6px]
-
-                          bg-black/15
-
-                          hover:bg-black/30
-                        `
-                    }
-                  `}
-                />
-              )
-            )}
-          </div>
-
-          {/* SERVICES PAGE LINK */}
-
-          <Link
-            href="/services"
-
-            className="
-              group
-
-              mt-4
-
-              inline-flex
-
-              items-center
-              gap-2
-
-              font-sora
-
-              text-[10px]
-              font-semibold
-
-              uppercase
-
-              tracking-[0.12em]
-
-              text-black/35
-
-              transition-colors
-
-              duration-300
-
-              hover:text-black
-            "
-          >
-            Explore all services
-
-            <span
-              className="
-                transition-transform
-
-                duration-300
-
-                group-hover:translate-x-1
-              "
-            >
-              →
-            </span>
-          </Link>
-        </div>
       </div>
     </section>
   );

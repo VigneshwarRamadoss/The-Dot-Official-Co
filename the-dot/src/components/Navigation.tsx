@@ -1,19 +1,50 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 import { NavigationTrigger } from "./NavigationTrigger";
 import { FullscreenMenu } from "./FullscreenMenu";
 
-export function Navigation() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("hero");
+function getSectionFromPath(pathname: string) {
+  if (pathname === "/book-a-call") return "contact";
+  if (pathname.startsWith("/contact")) return "contact";
+  if (pathname.startsWith("/services")) return "services";
+  if (pathname.startsWith("/work")) return "work";
+  if (pathname.startsWith("/team")) return "team";
+  if (pathname.startsWith("/about")) return "about";
 
-  const handleSelectSection = (id: string) => {
+  return "hero";
+}
+
+export function Navigation() {
+  const pathname = usePathname();
+
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const [activeSection, setActiveSection] = useState(() =>
+    getSectionFromPath(pathname)
+  );
+
+  const contactFormMode =
+    pathname === "/book-a-call";
+
+  useEffect(() => {
+    setActiveSection(
+      getSectionFromPath(pathname)
+    );
+  }, [pathname]);
+
+  const handleSelectSection = (
+    id: string
+  ) => {
     setActiveSection(id);
 
-    if (typeof window !== "undefined") {
+    if (
+      typeof window !==
+      "undefined"
+    ) {
       window.location.href =
         id === "hero"
           ? "/"
@@ -86,9 +117,19 @@ export function Navigation() {
 
           <NavigationTrigger
             isOpen={menuOpen}
-            activeSection={activeSection}
+            activeSection={
+              activeSection
+            }
+            routeMode={
+              contactFormMode
+                ? "contact-form"
+                : "default"
+            }
             onToggle={() => {
-              setMenuOpen((previous) => !previous);
+              setMenuOpen(
+                (previous) =>
+                  !previous
+              );
             }}
           />
         </div>
@@ -99,8 +140,12 @@ export function Navigation() {
         onClose={() => {
           setMenuOpen(false);
         }}
-        activeSection={activeSection}
-        onSelectSection={handleSelectSection}
+        activeSection={
+          activeSection
+        }
+        onSelectSection={
+          handleSelectSection
+        }
       />
     </>
   );

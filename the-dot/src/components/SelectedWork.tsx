@@ -1,11 +1,19 @@
 "use client";
 
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import Link from "next/link";
 
 import { WorkStack } from "./WorkStack";
 import type { WorkProject } from "./WorkCard";
 
 export function SelectedWork() {
+  const [headerVisible, setHeaderVisible] =
+    useState(false);
+
   const sampleProjects: WorkProject[] = [
     {
       slug: "orbit-studio",
@@ -17,7 +25,6 @@ export function SelectedWork() {
       summary:
         "A brand and digital experience designed to translate Orbit Studio's physical design philosophy into a more distinctive and internationally credible online presence.",
     },
-
     {
       slug: "swastik-corporation",
       client: "Swastik Corporation",
@@ -32,7 +39,6 @@ export function SelectedWork() {
       summary:
         "A unified enterprise product experience created to simplify complex operations, improve visibility and reduce friction across everyday workflows.",
     },
-
     {
       slug: "skydic-outdoor",
       client: "Skydic Outdoor",
@@ -48,64 +54,123 @@ export function SelectedWork() {
     },
   ];
 
+  /* =========================================================
+     WORK INTRO HEADER
+
+     NavigationTrigger controls the opening mascot journey.
+
+     When DOT reaches its left-centre position:
+       dot:work-header-show
+
+     When leaving Work:
+       dot:work-reset
+     ========================================================= */
+
+  useEffect(() => {
+    const showHeader = () => {
+      setHeaderVisible(true);
+    };
+
+    const resetHeader = () => {
+      setHeaderVisible(false);
+    };
+
+    window.addEventListener(
+      "dot:work-header-show",
+      showHeader
+    );
+
+    window.addEventListener(
+      "dot:work-reset",
+      resetHeader
+    );
+
+    return () => {
+      window.removeEventListener(
+        "dot:work-header-show",
+        showHeader
+      );
+
+      window.removeEventListener(
+        "dot:work-reset",
+        resetHeader
+      );
+    };
+  }, []);
+
   return (
     <section
       id="work"
       className="
         relative
-
+        h-[100svh]
+        min-h-[720px]
         w-full
-
+        overflow-hidden
         bg-white
-
         px-4
-        py-16
-
+        py-9
         md:px-8
-        md:py-20
+        md:py-11
+        xl:py-12
       "
     >
       <div
         className="
           mx-auto
-
+          flex
+          h-full
           w-full
           max-w-[1440px]
+          flex-col
         "
       >
-        {/* ===============================================
+        {/* =================================================
             HEADER
 
-            No dark outer frame anymore.
-           =============================================== */}
+            Hidden until DOT finishes:
+            NAV → CENTRE → LEFT-CENTRE
+           ================================================= */}
 
         <div
           className="
-            mb-4
-
+            relative
+            z-20
             flex
+            shrink-0
             items-start
             justify-between
-
             gap-8
-
-            md:mb-6
+            transition-[opacity,transform]
+            duration-700
+            ease-[cubic-bezier(.16,1,.3,1)]
           "
+          style={{
+            opacity:
+              headerVisible
+                ? 1
+                : 0,
+
+            transform:
+              headerVisible
+                ? "translateY(0px)"
+                : "translateY(14px)",
+
+            pointerEvents:
+              headerVisible
+                ? "auto"
+                : "none",
+          }}
         >
           <div>
             <p
               className="
                 font-sora
-
                 text-[10px]
                 font-semibold
-
                 uppercase
-
                 tracking-[0.22em]
-
                 text-black/38
-
                 md:text-[11px]
               "
             >
@@ -114,22 +179,16 @@ export function SelectedWork() {
 
             <h2
               className="
-                mt-3
-
+                mt-2.5
                 font-sora
-
-                text-[36px]
+                text-[34px]
                 font-bold
-
                 leading-[0.95]
-
                 tracking-[-0.055em]
-
                 text-[#181818]
-
-                sm:text-[44px]
-
-                md:text-[54px]
+                sm:text-[40px]
+                md:text-[48px]
+                xl:text-[52px]
               "
             >
               Featured Case Studies
@@ -140,27 +199,17 @@ export function SelectedWork() {
             href="/work"
             className="
               group
-
               mt-1
-
               hidden
-
               items-center
               gap-2
-
               font-sora
-
-              text-[13px]
+              text-[12px]
               font-medium
-
-              text-black/48
-
+              text-black/42
               transition-colors
-
               duration-300
-
               hover:text-black
-
               md:flex
             "
           >
@@ -169,9 +218,7 @@ export function SelectedWork() {
             <span
               className="
                 transition-transform
-
                 duration-300
-
                 group-hover:translate-x-1
               "
             >
@@ -180,34 +227,49 @@ export function SelectedWork() {
           </Link>
         </div>
 
-        {/* ===============================================
-            CUBE + DETAILS
-           =============================================== */}
+        {/* =================================================
+            WORK STAGE
+           ================================================= */}
 
-        <WorkStack
-          projects={sampleProjects}
-        />
+        <div
+          className="
+            min-h-0
+            flex-1
+          "
+        >
+          <WorkStack
+            projects={sampleProjects}
+          />
+        </div>
 
-        {/* MOBILE ALL PROJECTS */}
+        {/* MOBILE CTA */}
 
-        <div className="mt-6 md:hidden">
+        <div
+          className="
+            mt-4
+            shrink-0
+            md:hidden
+          "
+          style={{
+            opacity:
+              headerVisible
+                ? 1
+                : 0,
+          }}
+        >
           <Link
             href="/work"
             className="
               inline-flex
               items-center
               gap-2
-
               font-sora
-
-              text-[14px]
+              text-[13px]
               font-semibold
-
               text-black/55
             "
           >
             All projects
-
             <span>→</span>
           </Link>
         </div>

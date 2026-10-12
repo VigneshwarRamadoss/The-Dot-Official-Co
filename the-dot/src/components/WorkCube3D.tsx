@@ -23,11 +23,16 @@ import type {
 } from "./WorkCard";
 
 /* =========================================================
-   SETTINGS
+   CUBE
+
+   Slightly reduced from 2.95 → 2.82.
+
+   Camera also moved back very slightly so the cube's
+   outer edges remain visible while passing through
+   the diagonal rotation angles.
    ========================================================= */
 
-const CUBE_SIZE =
-  2.72;
+const CUBE_SIZE = 2.82;
 
 const HALF =
   CUBE_SIZE / 2;
@@ -35,39 +40,22 @@ const HALF =
 const FACE_OFFSET =
   HALF + 0.004;
 
-/*
- * Initial black cube.
- *
- * X reveals top.
- * Y reveals side.
- * Z remains 0 so it does not look
- * randomly rolled.
- */
 const INTRO_X =
   -0.28;
 
 const INTRO_Y =
   -0.52;
 
-/*
- * Main project rotations.
- */
 const ROTATION_DAMPING =
-  4.2;
+  4.0;
 
 const INTRO_DAMPING =
-  3.2;
+  3.0;
 
 const SETTLE_THRESHOLD =
   0.008;
 
-/* =========================================================
-   FOUR PROJECT SIDES
-   ========================================================= */
-
 const SIDE_FACES = [
-  /* FRONT */
-
   {
     position: [
       0,
@@ -81,8 +69,6 @@ const SIDE_FACES = [
       0,
     ] as const,
   },
-
-  /* RIGHT */
 
   {
     position: [
@@ -98,8 +84,6 @@ const SIDE_FACES = [
     ] as const,
   },
 
-  /* BACK */
-
   {
     position: [
       0,
@@ -113,8 +97,6 @@ const SIDE_FACES = [
       0,
     ] as const,
   },
-
-  /* LEFT */
 
   {
     position: [
@@ -131,53 +113,21 @@ const SIDE_FACES = [
   },
 ];
 
-/* =========================================================
-   PROPS
-   ========================================================= */
-
 interface WorkCube3DProps {
   projects:
     WorkProject[];
 
-  /*
-   * Keeps increasing instead of wrapping:
-   *
-   * 0
-   * 1
-   * 2
-   * 3
-   * 4
-   * 5...
-   *
-   * Therefore cube always rotates
-   * horizontally in the same direction.
-   */
   rotationStep:
     number;
 
-  /*
-   * true:
-   * black 3-face opening.
-   *
-   * false:
-   * clean single project face.
-   */
   introMode:
     boolean;
 
-  /*
-   * Images remain invisible during
-   * the black cube opening.
-   */
   showImages:
     boolean;
 
   onSettled?: () => void;
 }
-
-/* =========================================================
-   SCENE
-   ========================================================= */
 
 function CubeScene({
   projects,
@@ -190,6 +140,11 @@ function CubeScene({
     useRef<THREE.Group>(
       null
     );
+
+  const bodyMaterialRef =
+    useRef<
+      THREE.MeshStandardMaterial | null
+    >(null);
 
   const imageMaterialsRef =
     useRef<
@@ -204,15 +159,10 @@ function CubeScene({
   const lastTargetRef =
     useRef("");
 
-  /* =======================================================
-     ENSURE FOUR PROJECT FACES
-     ======================================================= */
-
   const faceProjects =
     useMemo(() => {
       if (
-        projects.length ===
-        0
+        projects.length === 0
       ) {
         return [];
       }
@@ -228,10 +178,6 @@ function CubeScene({
           ]
       );
     }, [projects]);
-
-  /* =======================================================
-     TEXTURES
-     ======================================================= */
 
   const urls =
     useMemo(
@@ -272,11 +218,9 @@ function CubeScene({
           true;
       }
     );
-  }, [textures]);
-
-  /* =======================================================
-     INITIAL BLACK 3-FACE POSITION
-     ======================================================= */
+  }, [
+    textures,
+  ]);
 
   useEffect(() => {
     const cube =
@@ -293,10 +237,6 @@ function CubeScene({
     );
   }, []);
 
-  /* =======================================================
-     FRAME
-     ======================================================= */
-
   useFrame(
     (
       _,
@@ -308,10 +248,6 @@ function CubeScene({
       if (!cube) {
         return;
       }
-
-      /* ===============================================
-         TARGET ROTATION
-         =============================================== */
 
       const targetX =
         introMode
@@ -346,9 +282,6 @@ function CubeScene({
           ? INTRO_DAMPING
           : ROTATION_DAMPING;
 
-      /*
-       * Smooth frame-independent damping.
-       */
       cube.rotation.x =
         THREE.MathUtils.damp(
           cube.rotation.x,
@@ -365,19 +298,25 @@ function CubeScene({
           delta
         );
 
-      /*
-       * Never introduce roll.
-       */
-      cube.rotation.z = 0;
-
-      /* ===============================================
-         IMAGE FADE
-         =============================================== */
+      cube.rotation.z =
+        0;
 
       const targetOpacity =
         showImages
           ? 1
           : 0;
+
+      if (
+        bodyMaterialRef.current
+      ) {
+        bodyMaterialRef.current.opacity =
+          THREE.MathUtils.damp(
+            bodyMaterialRef.current.opacity,
+            targetOpacity,
+            5.2,
+            delta
+          );
+      }
 
       imageMaterialsRef.current.forEach(
         (
@@ -391,15 +330,11 @@ function CubeScene({
             THREE.MathUtils.damp(
               material.opacity,
               targetOpacity,
-              5.5,
+              5.2,
               delta
             );
         }
       );
-
-      /* ===============================================
-         SETTLED
-         =============================================== */
 
       const xDifference =
         Math.abs(
@@ -444,13 +379,6 @@ function CubeScene({
 
   return (
     <>
-      {/* =================================================
-          LIGHTING
-
-          Important during the black opening:
-          lighting separates the 3 visible planes.
-         ================================================= */}
-
       <ambientLight
         intensity={0.7}
       />
@@ -482,23 +410,9 @@ function CubeScene({
         intensity={0.2}
       />
 
-      {/* =================================================
-          CUBE
-         ================================================= */}
-
       <group
         ref={cubeRef}
       >
-        {/* =================================================
-            BLACK BODY
-
-            This is all the user sees
-            during the first second.
-
-            Since cube begins at an angle,
-            three faces are visible.
-           ================================================= */}
-
         <mesh>
           <boxGeometry
             args={[
@@ -509,21 +423,16 @@ function CubeScene({
           />
 
           <meshStandardMaterial
+            ref={
+              bodyMaterialRef
+            }
             color="#090909"
             roughness={0.62}
             metalness={0.04}
+            transparent
+            opacity={0}
           />
         </mesh>
-
-        {/* =================================================
-            FOUR IMAGE PLANES
-
-            opacity 0:
-            pure black cube
-
-            opacity 1:
-            project cube
-           ================================================= */}
 
         {faceProjects.map(
           (
@@ -576,8 +485,12 @@ function CubeScene({
                   color="#FFFFFF"
                   transparent
                   opacity={0}
-                  depthWrite={false}
-                  toneMapped={false}
+                  depthWrite={
+                    false
+                  }
+                  toneMapped={
+                    false
+                  }
                   side={
                     THREE.FrontSide
                   }
@@ -588,28 +501,24 @@ function CubeScene({
         )}
       </group>
 
-      {/* =================================================
-          SHADOW
-         ================================================= */}
-
       <ContactShadows
         position={[
           0,
-          -1.55,
+          -1.57,
           0,
         ]}
-        opacity={0.1}
-        scale={5.2}
-        blur={3.2}
-        far={5}
+        opacity={
+          showImages
+            ? 0.085
+            : 0
+        }
+        scale={5.4}
+        blur={3.4}
+        far={6}
       />
     </>
   );
 }
-
-/* =========================================================
-   CANVAS
-   ========================================================= */
 
 export function WorkCube3D({
   projects,
@@ -634,7 +543,7 @@ export function WorkCube3D({
         position: [
           0,
           0,
-          7.15,
+          7.35,
         ],
 
         fov: 28,
@@ -659,19 +568,15 @@ export function WorkCube3D({
         projects={
           projects
         }
-
         rotationStep={
           rotationStep
         }
-
         introMode={
           introMode
         }
-
         showImages={
           showImages
         }
-
         onSettled={
           onSettled
         }

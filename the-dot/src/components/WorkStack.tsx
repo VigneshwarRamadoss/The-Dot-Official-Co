@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -10,9 +11,7 @@ import {
 import dynamic from "next/dynamic";
 import Link from "next/link";
 
-import type {
-  WorkProject,
-} from "./WorkCard";
+import type { WorkProject } from "./WorkCard";
 
 const WorkCube3D = dynamic(
   () =>
@@ -21,7 +20,6 @@ const WorkCube3D = dynamic(
     ),
   {
     ssr: false,
-
     loading: () => (
       <div className="h-full w-full" />
     ),
@@ -32,30 +30,29 @@ interface WorkStackProps {
   projects: WorkProject[];
 }
 
-/* =========================================================
-   TIMING
-   ========================================================= */
-
-const BLACK_CUBE_HOLD = 1000;
-
-const CONTENT_REVEAL_DELAY = 420;
-
-/*
- * Idle for 5 seconds:
- * cube automatically moves to next project.
- */
 const AUTOPLAY_DELAY = 5000;
-
-/*
- * Protect against one wheel gesture
- * triggering multiple project rotations.
- */
-const WHEEL_COOLDOWN = 900;
-
-/*
- * Ignore tiny trackpad noise.
- */
+const WHEEL_COOLDOWN = 1000;
+const DOCKED_MANUAL_DELAY = 720;
 const WHEEL_THRESHOLD = 16;
+
+const WORK_THOUGHTS = [
+  {
+    text: "A space that feels like home.",
+    animation: "proud",
+  },
+  {
+    text: "Complex underneath. Simple to use.",
+    animation: "thinking",
+  },
+  {
+    text: "Clean systems make scaling feel lighter.",
+    animation: "playful",
+  },
+  {
+    text: "Back where we started. Still looks good.",
+    animation: "proud",
+  },
+] as const;
 
 export function WorkStack({
   projects,
@@ -69,13 +66,13 @@ export function WorkStack({
   const autoplayTimerRef =
     useRef<number | null>(null);
 
-  const revealTimerRef =
-    useRef<number | null>(null);
-
   const wheelLockedRef =
     useRef(false);
 
   const wheelUnlockTimerRef =
+    useRef<number | null>(null);
+
+  const manualRotationTimerRef =
     useRef<number | null>(null);
 
   const rotationStepRef =
@@ -86,6 +83,12 @@ export function WorkStack({
 
   const automationPausedRef =
     useRef(false);
+
+  const dotDockedRef =
+    useRef(false);
+
+  const pendingRotationDirectionRef =
+    useRef<1 | -1>(1);
 
   const [
     introMode,
@@ -117,10 +120,6 @@ export function WorkStack({
     setRotationStep,
   ] = useState(0);
 
-  /* =======================================================
-     KEEP REFS CURRENT
-     ======================================================= */
-
   useEffect(() => {
     rotationStepRef.current =
       rotationStep;
@@ -135,15 +134,6 @@ export function WorkStack({
     automationPausedRef.current =
       automationPaused;
   }, [automationPaused]);
-
-  /* =======================================================
-     FOUR PROJECT FACES
-
-     01
-     02
-     03
-     04 = repeat 01
-     ======================================================= */
 
   const faceProjects =
     useMemo(() => {
@@ -180,12 +170,8 @@ export function WorkStack({
       activeIndex
     ];
 
-  /* =======================================================
-     TIMER HELPERS
-     ======================================================= */
-
   const clearAutoplay =
-    () => {
+    useCallback(() => {
       if (
         autoplayTimerRef.current !==
         null
@@ -197,39 +183,233 @@ export function WorkStack({
         autoplayTimerRef.current =
           null;
       }
-    };
+    }, []);
 
-  /* =======================================================
-     INTRO
+  const clearManualTimer =
+    useCallback(() => {
+      if (
+        manualRotationTimerRef.current !==
+        null
+      ) {
+        window.clearTimeout(
+          manualRotationTimerRef.current
+        );
 
-     0 sec
-       black cube / 3 visible faces
+        manualRotationTimerRef.current =
+          null;
+      }
+    }, []);
 
-     1 sec
-       rotate into straight project face
+  const notifyDotPull =
+    useCallback(
+      (
+        direction: 1 | -1,
+        source:
+          | "intro"
+          | "auto"
+          | "manual"
+      ) => {
+        window.dispatchEvent(
+          new CustomEvent(
+            "dot:work-pull-start",
+            {
+              detail: {
+                direction,
+                source,
+              },
+            }
+          )
+        );
+      },
+      []
+    );
 
-     ~1.4 sec
-       image + content reveal
-     ======================================================= */
+  const notifyDotSettled =
+    useCallback(
+      (
+        index: number
+      ) => {
+        const thought =
+          WORK_THOUGHTS[
+            index %
+              WORK_THOUGHTS.length
+          ];
+
+        window.dispatchEvent(
+          new CustomEvent(
+            "dot:work-settled",
+            {
+              detail: {
+                index,
+                thought:
+                  thought.text,
+                animation:
+                  thought.animation,
+              },
+            }
+          )
+        );
+      },
+      []
+    );
+
+  const rotateCube =
+    useCallback(
+      (
+        direction:
+          | 1
+          | -1,
+        source:
+          | "auto"
+          | "manual"
+      ) => {
+        pendingRotationDirectionRef.current =
+          direction;
+
+        setContentVisible(
+          false
+        );
+
+        notifyDotPull(
+          direction,
+          source
+        );
+
+        setRotationStep(
+          (previous) =>
+            previous +
+            direction
+        );
+      },
+      [
+        notifyDotPull,
+      ]
+    );
+
+  /* =========================================================
+     DOT DOCK STATE
+     ========================================================= */
 
   useEffect(() => {
-    const root =
-      rootRef.current;
+    const handleDockState =
+      (
+        event: Event
+      ) => {
+        const detail =
+          (
+            event as CustomEvent<{
+              docked:
+                boolean;
+            }>
+          ).detail;
 
-    if (!root) {
-      return;
-    }
+        dotDockedRef.current =
+          detail.docked;
+      };
 
-    const scene =
-      root.closest<HTMLElement>(
-        "[data-scene-scroll]"
+    window.addEventListener(
+      "dot:work-docked-state",
+      handleDockState
+    );
+
+    return () => {
+      window.removeEventListener(
+        "dot:work-docked-state",
+        handleDockState
       );
+    };
+  }, []);
 
-    let blackTimer:
-      number | null =
-      null;
+  /* =========================================================
+     RESET
+     ========================================================= */
 
-    const startIntro =
+  useEffect(() => {
+    const handleWorkReset =
+      () => {
+        clearAutoplay();
+        clearManualTimer();
+
+        if (
+          wheelUnlockTimerRef.current !==
+          null
+        ) {
+          window.clearTimeout(
+            wheelUnlockTimerRef.current
+          );
+
+          wheelUnlockTimerRef.current =
+            null;
+        }
+
+        introStartedRef.current =
+          false;
+
+        rotationStepRef.current =
+          0;
+
+        introFinishedRef.current =
+          false;
+
+        automationPausedRef.current =
+          false;
+
+        dotDockedRef.current =
+          false;
+
+        pendingRotationDirectionRef.current =
+          1;
+
+        wheelLockedRef.current =
+          false;
+
+        setIntroMode(
+          true
+        );
+
+        setImagesVisible(
+          false
+        );
+
+        setContentVisible(
+          false
+        );
+
+        setIntroFinished(
+          false
+        );
+
+        setAutomationPaused(
+          false
+        );
+
+        setRotationStep(
+          0
+        );
+      };
+
+    window.addEventListener(
+      "dot:work-reset",
+      handleWorkReset
+    );
+
+    return () => {
+      window.removeEventListener(
+        "dot:work-reset",
+        handleWorkReset
+      );
+    };
+  }, [
+    clearAutoplay,
+    clearManualTimer,
+  ]);
+
+  /* =========================================================
+     INTRO
+     ========================================================= */
+
+  useEffect(() => {
+    const handleIntroPull =
       () => {
         if (
           introStartedRef.current
@@ -240,126 +420,41 @@ export function WorkStack({
         introStartedRef.current =
           true;
 
-        blackTimer =
-          window.setTimeout(
-            () => {
-              /*
-               * Three-face black cube
-               * →
-               * straight front face.
-               */
-              setIntroMode(false);
+        pendingRotationDirectionRef.current =
+          1;
 
-              revealTimerRef.current =
-                window.setTimeout(
-                  () => {
-                    setImagesVisible(
-                      true
-                    );
+        setImagesVisible(
+          true
+        );
 
-                    setContentVisible(
-                      true
-                    );
+        notifyDotPull(
+          1,
+          "intro"
+        );
 
-                    setIntroFinished(
-                      true
-                    );
-                  },
-                  CONTENT_REVEAL_DELAY
-                );
-            },
-            BLACK_CUBE_HOLD
-          );
+        setIntroMode(
+          false
+        );
       };
 
-    if (!scene) {
-      startIntro();
-    } else if (
-      scene.dataset.active ===
-      "true"
-    ) {
-      startIntro();
-    }
-
-    if (!scene) {
-      return () => {
-        if (
-          blackTimer !== null
-        ) {
-          window.clearTimeout(
-            blackTimer
-          );
-        }
-
-        if (
-          revealTimerRef.current !==
-          null
-        ) {
-          window.clearTimeout(
-            revealTimerRef.current
-          );
-        }
-      };
-    }
-
-    const observer =
-      new MutationObserver(
-        () => {
-          if (
-            scene.dataset.active ===
-            "true"
-          ) {
-            startIntro();
-          }
-        }
-      );
-
-    observer.observe(
-      scene,
-      {
-        attributes: true,
-
-        attributeFilter: [
-          "data-active",
-        ],
-      }
+    window.addEventListener(
+      "dot:work-intro-pull",
+      handleIntroPull
     );
 
     return () => {
-      observer.disconnect();
-
-      if (
-        blackTimer !== null
-      ) {
-        window.clearTimeout(
-          blackTimer
-        );
-      }
-
-      if (
-        revealTimerRef.current !==
-        null
-      ) {
-        window.clearTimeout(
-          revealTimerRef.current
-        );
-      }
+      window.removeEventListener(
+        "dot:work-intro-pull",
+        handleIntroPull
+      );
     };
-  }, []);
+  }, [
+    notifyDotPull,
+  ]);
 
-  /* =======================================================
-     MOUSE / TRACKPAD CONTROL
-
-     IMPORTANT:
-
-     While cube can move in requested direction,
-     EVERY wheel event is prevented.
-
-     This includes the inertia/momentum events
-     after the first physical scroll.
-
-     Therefore page stays completely still.
-     ======================================================= */
+  /* =========================================================
+     MANUAL WHEEL CONTROL
+     ========================================================= */
 
   useEffect(() => {
     const root =
@@ -371,13 +466,8 @@ export function WorkStack({
 
     const handleWheel =
       (
-        event:
-          WheelEvent
+        event: WheelEvent
       ) => {
-        /*
-         * Before intro finishes,
-         * don't trap the user.
-         */
         if (
           !introFinishedRef.current
         ) {
@@ -404,15 +494,8 @@ export function WorkStack({
           4;
 
         const scrollingDown =
-          event.deltaY > 0;
-
-        /* =============================================
-           RELEASE DOWNWARD SCROLL
-
-           Project 04
-                ↓
-           next page section
-           ============================================= */
+          event.deltaY >
+          0;
 
         if (
           scrollingDown &&
@@ -422,14 +505,6 @@ export function WorkStack({
           return;
         }
 
-        /* =============================================
-           RELEASE UPWARD SCROLL
-
-           Project 01
-                ↑
-           previous page content
-           ============================================= */
-
         if (
           !scrollingDown &&
           current === 0 &&
@@ -438,35 +513,14 @@ export function WorkStack({
           return;
         }
 
-        /*
-         * VERY IMPORTANT:
-         *
-         * Prevent page movement BEFORE checking
-         * the wheel lock.
-         *
-         * This absorbs all momentum events from
-         * the current scroll gesture.
-         */
         event.preventDefault();
         event.stopPropagation();
 
-        /*
-         * Cube is already transitioning.
-         *
-         * Still consume wheel events,
-         * but do NOT trigger another rotation.
-         */
         if (
           wheelLockedRef.current
         ) {
           return;
         }
-
-        /* =============================================
-           MANUAL CONTROL STARTED
-
-           Permanently pause autoplay.
-           ============================================= */
 
         if (
           !automationPausedRef.current
@@ -484,41 +538,45 @@ export function WorkStack({
         wheelLockedRef.current =
           true;
 
-        /*
-         * Hide current project's copy.
-         */
-        setContentVisible(
-          false
+        const direction:
+          | 1
+          | -1 =
+          scrollingDown
+            ? 1
+            : -1;
+
+        window.dispatchEvent(
+          new CustomEvent(
+            "dot:work-interaction",
+            {
+              detail: {
+                direction,
+              },
+            }
+          )
         );
 
-        /* =============================================
-           ROTATE
-           ============================================= */
+        clearManualTimer();
 
-        if (
-          scrollingDown
-        ) {
-          setRotationStep(
-            (
-              previous
-            ) =>
-              previous +
-              1
-          );
-        } else {
-          setRotationStep(
-            (
-              previous
-            ) =>
-              previous -
-              1
-          );
-        }
+        const rotationDelay =
+          dotDockedRef.current
+            ? DOCKED_MANUAL_DELAY
+            : 0;
 
-        /*
-         * Absorb mouse/trackpad momentum
-         * while the cube completes movement.
-         */
+        manualRotationTimerRef.current =
+          window.setTimeout(
+            () => {
+              rotateCube(
+                direction,
+                "manual"
+              );
+
+              manualRotationTimerRef.current =
+                null;
+            },
+            rotationDelay
+          );
+
         if (
           wheelUnlockTimerRef.current !==
           null
@@ -537,16 +595,11 @@ export function WorkStack({
               wheelUnlockTimerRef.current =
                 null;
             },
-            WHEEL_COOLDOWN
+            WHEEL_COOLDOWN +
+              rotationDelay
           );
       };
 
-    /*
-     * passive:false is essential.
-     *
-     * Without this the browser is allowed
-     * to scroll even after preventDefault().
-     */
     root.addEventListener(
       "wheel",
       handleWheel,
@@ -565,6 +618,8 @@ export function WorkStack({
         }
       );
 
+      clearManualTimer();
+
       if (
         wheelUnlockTimerRef.current !==
         null
@@ -574,11 +629,15 @@ export function WorkStack({
         );
       }
     };
-  }, []);
+  }, [
+    clearAutoplay,
+    clearManualTimer,
+    rotateCube,
+  ]);
 
-  /* =======================================================
-     AUTOPLAY — 5 SECONDS
-     ======================================================= */
+  /* =========================================================
+     AUTOPLAY
+     ========================================================= */
 
   useEffect(() => {
     clearAutoplay();
@@ -594,20 +653,9 @@ export function WorkStack({
     autoplayTimerRef.current =
       window.setTimeout(
         () => {
-          setContentVisible(
-            false
-          );
-
-          /*
-           * Auto rotation always continues
-           * in the same horizontal direction.
-           */
-          setRotationStep(
-            (
-              previous
-            ) =>
-              previous +
-              1
+          rotateCube(
+            1,
+            "auto"
           );
         },
         AUTOPLAY_DELAY
@@ -621,9 +669,13 @@ export function WorkStack({
     introFinished,
     contentVisible,
     automationPaused,
+    clearAutoplay,
+    rotateCube,
   ]);
 
-  if (!activeProject) {
+  if (
+    !activeProject
+  ) {
     return null;
   }
 
@@ -632,144 +684,167 @@ export function WorkStack({
       ref={rootRef}
       className="
         relative
-
         grid
-
-        min-h-[58svh]
+        h-full
+        min-h-0
         w-full
-
         grid-cols-1
-
         items-center
-
-        gap-6
-
         overscroll-contain
-
-        lg:grid-cols-10
-        lg:gap-3
+        lg:grid-cols-12
+        lg:gap-0
       "
     >
       {/* =================================================
-          LEFT 60% — CUBE
+          SMALL LEFT BREATHING SPACE
          ================================================= */}
 
       <div
+        aria-hidden="true"
+        className="
+          hidden
+          h-full
+          lg:col-span-1
+          lg:block
+        "
+      />
+
+      {/* =================================================
+          LARGE CUBE AREA
+         ================================================= */}
+
+      <div
+        data-work-cube-zone
         className="
           relative
-
-          h-[360px]
+          flex
+          h-[390px]
+          min-h-0
           w-full
+          flex-col
 
-          sm:h-[410px]
-
-          md:h-[450px]
+          sm:h-[440px]
+          md:h-[500px]
 
           lg:col-span-6
-          lg:h-[500px]
+          lg:h-[clamp(470px,65vh,590px)]
+          lg:-translate-x-4
 
-          xl:h-[535px]
+          xl:h-[clamp(500px,67vh,620px)]
+          xl:-translate-x-6
         "
       >
-        <WorkCube3D
-          projects={
-            faceProjects
-          }
-
-          rotationStep={
-            rotationStep
-          }
-
-          introMode={
-            introMode
-          }
-
-          showImages={
-            imagesVisible
-          }
-
-          onSettled={() => {
-            /*
-             * Initial reveal uses its own timer.
-             */
-            if (
-              !introFinishedRef.current
-            ) {
-              return;
+        <div
+          className="
+            min-h-0
+            w-full
+            flex-1
+          "
+        >
+          <WorkCube3D
+            projects={
+              faceProjects
             }
+            rotationStep={
+              rotationStep
+            }
+            introMode={
+              introMode
+            }
+            showImages={
+              imagesVisible
+            }
+            onSettled={() => {
+              const current =
+                (
+                  (
+                    rotationStepRef.current %
+                    4
+                  ) +
+                  4
+                ) %
+                4;
 
-            /*
-             * New project face is now
-             * looking directly forward.
-             */
-            setContentVisible(
-              true
-            );
-          }}
+              if (
+                !introFinishedRef.current
+              ) {
+                introFinishedRef.current =
+                  true;
+
+                setIntroFinished(
+                  true
+                );
+
+                setContentVisible(
+                  true
+                );
+
+                notifyDotSettled(
+                  current
+                );
+
+                return;
+              }
+
+              setContentVisible(
+                true
+              );
+
+              notifyDotSettled(
+                current
+              );
+            }}
+          />
+        </div>
+
+        {/* =================================================
+            DOT HOME
+
+            Under cube, toward its lower-right.
+           ================================================= */}
+
+        <span
+          data-dot-work-home
+          aria-hidden="true"
+          className="
+            pointer-events-none
+            absolute
+            -bottom-[4px]
+            left-[83%]
+            h-px
+            w-px
+          "
         />
-
-        {/* INTERACTION HINT */}
-
-        {introFinished && (
-          <div
-            className="
-              pointer-events-none
-
-              absolute
-
-              bottom-2
-              left-1/2
-
-              -translate-x-1/2
-
-              whitespace-nowrap
-
-              font-sora
-
-              text-[9px]
-              font-semibold
-
-              uppercase
-
-              tracking-[0.18em]
-
-              text-black/25
-            "
-          >
-            Scroll to rotate
-          </div>
-        )}
       </div>
 
       {/* =================================================
-          RIGHT 40% — CONTENT
+          PROJECT COPY
+
+          Larger and closer to cube.
          ================================================= */}
 
       <div
         className="
           flex
-
+          min-w-0
           items-center
 
-          lg:col-span-4
+          lg:col-span-5
+          lg:-ml-10
+          lg:pr-4
 
-          lg:pl-4
-          lg:pr-6
-
-          xl:pl-7
-          xl:pr-10
+          xl:-ml-14
+          xl:pr-5
         "
       >
         <div
           key={`${activeProject.slug}-${activeIndex}`}
           className="
             w-full
-            max-w-[455px]
+            max-w-[500px]
 
             transition-[opacity,transform]
-
             duration-500
-
             ease-[cubic-bezier(.16,1,.3,1)]
 
             will-change-[opacity,transform]
@@ -795,8 +870,7 @@ export function WorkStack({
 
           <div
             className="
-              mb-4
-
+              mb-5
               flex
               items-center
               gap-4
@@ -805,15 +879,13 @@ export function WorkStack({
             <span
               className="
                 font-sora
-
                 text-[10px]
                 font-semibold
-
                 uppercase
+                tracking-[0.18em]
+                text-black/42
 
-                tracking-[0.16em]
-
-                text-black/40
+                xl:text-[11px]
               "
             >
               {String(
@@ -829,7 +901,6 @@ export function WorkStack({
               className="
                 h-px
                 w-10
-
                 bg-black/15
               "
             />
@@ -837,15 +908,13 @@ export function WorkStack({
             <span
               className="
                 font-sora
-
                 text-[10px]
                 font-semibold
-
                 uppercase
+                tracking-[0.18em]
+                text-black/42
 
-                tracking-[0.16em]
-
-                text-black/40
+                xl:text-[11px]
               "
             >
               {
@@ -858,21 +927,20 @@ export function WorkStack({
 
           <h3
             className="
-              max-w-[450px]
+              max-w-[500px]
 
               font-sora
 
-              text-[40px]
+              text-[38px]
               font-bold
 
-              leading-[0.94]
-
+              leading-[0.96]
               tracking-[-0.055em]
 
               text-[#181818]
 
-              sm:text-[44px]
-
+              sm:text-[42px]
+              lg:text-[48px]
               xl:text-[54px]
             "
           >
@@ -885,25 +953,22 @@ export function WorkStack({
 
           <p
             className="
-              mt-5
-
-              max-w-[420px]
+              mt-6
+              max-w-[480px]
 
               font-sora
 
               text-[14px]
-
               leading-[1.7]
 
-              text-black/55
+              text-black/50
 
-              xl:text-[15px]
+              lg:text-[15px]
+              xl:text-[16px]
             "
           >
-            {
-              activeProject.summary ??
-              `Selected work for ${activeProject.client}. Explore the thinking, design decisions and execution behind the project.`
-            }
+            {activeProject.summary ??
+              `Selected work for ${activeProject.client}. Explore the thinking, design decisions and execution behind the project.`}
           </p>
 
           {/* TAGS */}
@@ -911,11 +976,9 @@ export function WorkStack({
           <div
             className="
               mt-6
-
               flex
               flex-wrap
-
-              gap-2
+              gap-2.5
             "
           >
             {activeProject.tags.map(
@@ -931,8 +994,8 @@ export function WorkStack({
                     border
                     border-black/[0.09]
 
-                    px-3
-                    py-1.5
+                    px-4
+                    py-2
 
                     font-sora
 
@@ -940,10 +1003,9 @@ export function WorkStack({
                     font-semibold
 
                     uppercase
-
                     tracking-[0.09em]
 
-                    text-black/50
+                    text-black/48
                   "
                 >
                   {tag}
@@ -962,7 +1024,6 @@ export function WorkStack({
               mt-8
 
               inline-flex
-
               items-center
               gap-4
 
@@ -972,6 +1033,8 @@ export function WorkStack({
               font-semibold
 
               text-[#181818]
+
+              xl:text-[14px]
             "
           >
             <span className="relative">
@@ -980,8 +1043,7 @@ export function WorkStack({
               <span
                 className="
                   absolute
-
-                  -bottom-[5px]
+                  -bottom-[6px]
                   left-0
 
                   h-px
@@ -992,9 +1054,7 @@ export function WorkStack({
                   bg-[#181818]
 
                   transition-transform
-
                   duration-500
-
                   ease-[cubic-bezier(.16,1,.3,1)]
 
                   group-hover:scale-x-[0.3]
@@ -1006,8 +1066,8 @@ export function WorkStack({
               className="
                 grid
 
-                h-10
-                w-10
+                h-11
+                w-11
 
                 place-items-center
 
@@ -1017,9 +1077,7 @@ export function WorkStack({
                 border-black/10
 
                 transition-all
-
                 duration-500
-
                 ease-[cubic-bezier(.16,1,.3,1)]
 
                 group-hover:rotate-45
@@ -1046,30 +1104,54 @@ export function WorkStack({
             </span>
           </Link>
 
-          {/* STATUS */}
-
           <p
             className="
-              mt-8
+              mt-7
 
               font-sora
 
-              text-[9px]
+              text-[8px]
               font-semibold
 
               uppercase
+              tracking-[0.17em]
 
-              tracking-[0.16em]
-
-              text-black/20
+              text-black/18
             "
           >
             {automationPaused
               ? "Manual control"
-              : "Scroll to rotate"}
+              : ""}
           </p>
         </div>
       </div>
+
+      {/* =================================================
+          SCREEN-CENTRED SCROLL LABEL
+         ================================================= */}
+
+      <div
+  className="
+    pointer-events-none
+    absolute
+    bottom-[-16px]
+    left-1/2
+    z-20
+    -translate-x-1/2
+    whitespace-nowrap
+    font-sora
+    text-[8px]
+    font-semibold
+    uppercase
+    tracking-[0.2em]
+    text-black/22
+    lg:text-[9px]
+  "
+>
+  {introFinished
+    ? "Scroll to rotate"
+    : "\u00A0"}
+</div>
     </div>
   );
 }
